@@ -1,20 +1,30 @@
 package org.example.cinema_finale.util;
 
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.Persistence;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Persistence;
 
 public class JpaUtil {
-    private static EntityManagerFactory factory;
 
+    private static final String PERSISTENCE_UNIT_NAME = "cinemaPU";
+
+    private static final EntityManagerFactory emf =
+            Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME);
+
+    /**
+     * Tạo và trả về một EntityManager mới để thao tác với database.
+     * @return EntityManager mới
+     */
     public static EntityManager getEntityManager() {
-        if (factory == null || !factory.isOpen()) {
-            factory = Persistence.createEntityManagerFactory("CinemaPU");
-        }
-        return factory.createEntityManager();
+        return emf.createEntityManager();
     }
 
-    public static void shutDown() {
-        if (factory != null && factory.isOpen()) factory.close();
+    /**
+     * Đóng EntityManagerFactory khi ứng dụng kết thúc.
+     */
+    public static void close() {
+        if (emf != null && emf.isOpen()) {
+            emf.close();
+        }
     }
 }
