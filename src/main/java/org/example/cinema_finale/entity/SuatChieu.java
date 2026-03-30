@@ -1,189 +1,65 @@
 package org.example.cinema_finale.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import org.example.cinema_finale.enums.TrangThaiSuatChieu;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "suat_chieu")
 public class SuatChieu {
 
     @Id
-    @Column(name = "ma_suat", length = 20, nullable = false)
-    private String maSuat;
-
-    @Column(name = "ngay_chieu", nullable = false)
-    private LocalDate ngayChieu;
-
-    @Column(name = "gio_bat_dau", nullable = false)
-    private LocalTime gioBatDau;
-
-    @Column(name = "gio_ket_thuc", nullable = false)
-    private LocalTime gioKetThuc;
-
-    @Column(name = "gia_ve", precision = 12, scale = 2, nullable = false)
-    private BigDecimal giaVe;
+    @Column(name = "ma_suat_chieu", length = 20, nullable = false)
+    private String maSuatChieu;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ma_phim", nullable = false)
     private Phim phim;
 
-    /**
-     * Constructor mặc định bắt buộc cho JPA.
-     */
+    @Column(name = "ma_phong_chieu", length = 20, nullable = false)
+    private String maPhongChieu;
+
+    @Column(name = "ngay_gio_chieu", nullable = false)
+    private LocalDateTime ngayGioChieu;
+
+    @Column(name = "gia_ve_co_ban", precision = 12, scale = 2, nullable = false)
+    private BigDecimal giaVeCoBan;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "trang_thai_suat_chieu", length = 30, nullable = false)
+    private TrangThaiSuatChieu trangThaiSuatChieu;
+
     public SuatChieu() {
     }
 
-    /**
-     * Constructor khởi tạo suất chiếu.
-     *
-     * @param maSuat mã suất chiếu
-     * @param ngayChieu ngày chiếu
-     * @param gioBatDau giờ bắt đầu
-     * @param gioKetThuc giờ kết thúc
-     * @param giaVe giá vé
-     * @param phim phim của suất chiếu
-     */
-    public SuatChieu(String maSuat, LocalDate ngayChieu, LocalTime gioBatDau,
-                     LocalTime gioKetThuc, BigDecimal giaVe, Phim phim) {
-        this.maSuat = maSuat;
-        this.ngayChieu = ngayChieu;
-        this.gioBatDau = gioBatDau;
-        this.gioKetThuc = gioKetThuc;
-        this.giaVe = giaVe;
+    public SuatChieu(String maSuatChieu, Phim phim, String maPhongChieu,
+                     LocalDateTime ngayGioChieu, BigDecimal giaVeCoBan,
+                     TrangThaiSuatChieu trangThaiSuatChieu) {
+        this.maSuatChieu = maSuatChieu;
         this.phim = phim;
+        this.maPhongChieu = maPhongChieu;
+        this.ngayGioChieu = ngayGioChieu;
+        this.giaVeCoBan = giaVeCoBan;
+        this.trangThaiSuatChieu = trangThaiSuatChieu;
     }
 
-    /**
-     * Lấy mã suất chiếu.
-     *
-     * @return mã suất chiếu
-     */
-    public String getMaSuat() {
-        return maSuat;
-    }
+    public String getMaSuatChieu() { return maSuatChieu; }
+    public void setMaSuatChieu(String maSuatChieu) { this.maSuatChieu = maSuatChieu; }
 
-    /**
-     * Gán mã suất chiếu.
-     *
-     * @param maSuat mã suất chiếu
-     */
-    public void setMaSuat(String maSuat) {
-        this.maSuat = maSuat;
-    }
+    public Phim getPhim() { return phim; }
+    public void setPhim(Phim phim) { this.phim = phim; }
 
-    /**
-     * Lấy ngày chiếu.
-     *
-     * @return ngày chiếu
-     */
-    public LocalDate getNgayChieu() {
-        return ngayChieu;
-    }
+    public String getMaPhongChieu() { return maPhongChieu; }
+    public void setMaPhongChieu(String maPhongChieu) { this.maPhongChieu = maPhongChieu; }
 
-    /**
-     * Gán ngày chiếu.
-     *
-     * @param ngayChieu ngày chiếu
-     */
-    public void setNgayChieu(LocalDate ngayChieu) {
-        this.ngayChieu = ngayChieu;
-    }
+    public LocalDateTime getNgayGioChieu() { return ngayGioChieu; }
+    public void setNgayGioChieu(LocalDateTime ngayGioChieu) { this.ngayGioChieu = ngayGioChieu; }
 
-    /**
-     * Lấy giờ bắt đầu suất chiếu.
-     *
-     * @return giờ bắt đầu
-     */
-    public LocalTime getGioBatDau() {
-        return gioBatDau;
-    }
+    public BigDecimal getGiaVeCoBan() { return giaVeCoBan; }
+    public void setGiaVeCoBan(BigDecimal giaVeCoBan) { this.giaVeCoBan = giaVeCoBan; }
 
-    /**
-     * Gán giờ bắt đầu suất chiếu.
-     *
-     * @param gioBatDau giờ bắt đầu
-     */
-    public void setGioBatDau(LocalTime gioBatDau) {
-        this.gioBatDau = gioBatDau;
-    }
-
-    /**
-     * Lấy giờ kết thúc suất chiếu.
-     *
-     * @return giờ kết thúc
-     */
-    public LocalTime getGioKetThuc() {
-        return gioKetThuc;
-    }
-
-    /**
-     * Gán giờ kết thúc suất chiếu.
-     *
-     * @param gioKetThuc giờ kết thúc
-     */
-    public void setGioKetThuc(LocalTime gioKetThuc) {
-        this.gioKetThuc = gioKetThuc;
-    }
-
-    /**
-     * Lấy giá vé của suất chiếu.
-     *
-     * @return giá vé
-     */
-    public BigDecimal getGiaVe() {
-        return giaVe;
-    }
-
-    /**
-     * Gán giá vé của suất chiếu.
-     *
-     * @param giaVe giá vé
-     */
-    public void setGiaVe(BigDecimal giaVe) {
-        this.giaVe = giaVe;
-    }
-
-    /**
-     * Lấy phim của suất chiếu.
-     *
-     * @return phim
-     */
-    public Phim getPhim() {
-        return phim;
-    }
-
-    /**
-     * Gán phim cho suất chiếu.
-     *
-     * @param phim phim
-     */
-    public void setPhim(Phim phim) {
-        this.phim = phim;
-    }
-
-    /**
-     * Trả về chuỗi mô tả thông tin suất chiếu.
-     *
-     * @return thông tin suất chiếu dưới dạng chuỗi
-     */
-    @Override
-    public String toString() {
-        return "SuatChieu{" +
-                "maSuat='" + maSuat + '\'' +
-                ", ngayChieu=" + ngayChieu +
-                ", gioBatDau=" + gioBatDau +
-                ", gioKetThuc=" + gioKetThuc +
-                ", giaVe=" + giaVe +
-                ", maPhim='" + (phim != null ? phim.getMaPhim() : null) + '\'' +
-                '}';
-    }
+    public TrangThaiSuatChieu getTrangThaiSuatChieu() { return trangThaiSuatChieu; }
+    public void setTrangThaiSuatChieu(TrangThaiSuatChieu trangThaiSuatChieu) { this.trangThaiSuatChieu = trangThaiSuatChieu; }
 }

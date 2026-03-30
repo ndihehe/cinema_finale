@@ -2,24 +2,28 @@ package org.example.cinema_finale.dao;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
+import jakarta.persistence.NoResultException;
 import org.example.cinema_finale.entity.SuatChieu;
+import org.example.cinema_finale.enums.TrangThaiSuatChieu;
 import org.example.cinema_finale.util.JpaUtil;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public class SuatChieuDao {
 
     /**
      * Lấy toàn bộ danh sách suất chiếu.
-     *
-     * @return danh sách suất chiếu
+     * JOIN FETCH phim để tránh lỗi lazy khi UI hiển thị tên phim.
      */
     public List<SuatChieu> findAll() {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return em.createQuery(
-                    "SELECT sc FROM SuatChieu sc ORDER BY sc.ngayChieu, sc.gioBatDau",
+                    "SELECT sc FROM SuatChieu sc " +
+                            "JOIN FETCH sc.phim " +
+                            "ORDER BY sc.ngayGioChieu ASC",
                     SuatChieu.class
             ).getResultList();
         } finally {
@@ -28,25 +32,133 @@ public class SuatChieuDao {
     }
 
     /**
-     * Tìm suất chiếu theo mã suất.
-     *
-     * @param maSuat mã suất chiếu
-     * @return đối tượng suất chiếu nếu tìm thấy, ngược lại trả về null
+     * Tìm suất chiếu theo mã.
      */
-    public SuatChieu findById(String maSuat) {
+    public SuatChieu findById(String maSuatChieu) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
-            return em.find(SuatChieu.class, maSuat);
+            return em.createQuery(
+                            "SELECT sc FROM SuatChieu sc " +
+                                    "JOIN FETCH sc.phim " +
+                                    "WHERE sc.maSuatChieu = :maSuatChieu",
+                            SuatChieu.class
+                    ).setParameter("maSuatChieu", maSuatChieu)
+                    .getSingleResult();
+        } catch (NoResultException e) {
+            return null;
         } finally {
             em.close();
         }
     }
 
     /**
-     * Thêm mới một suất chiếu.
-     *
-     * @param suatChieu đối tượng suất chiếu cần thêm
-     * @return true nếu thêm thành công, ngược lại false
+     * Tìm suất chiếu theo mã phim.
+     */
+    public List<SuatChieu> findByMaPhim(String maPhim) {
+        EntityManager em = JpaUtil.getEntityManager();
+        try {
+            return em.createQuery(
+                            "SELECT sc FROM SuatChieu sc " +
+                                    "JOIN FETCH sc.phim " +
+                                    "WHERE sc.phim.maPhim = :maPhim " +
+                                    "ORDER BY sc.ngayGioChieu ASC",
+                            SuatChieu.class
+                    ).setParameter("maPhim", maPhim)
+                    .getResultList();
+        } finally {
+            em.close();
+        }
+    }
+
+    /**
+     * Tìm suất chiếu theo ngày.
+     */
+    public List<SuatChieu> findByNgay(LocalDate ngay) {
+        EntityManager em = JpaUtil.getEntityManager();
+        try {
+            LocalDateTime from = ngay.atStartOfDay();
+            LocalDateTime to = ngay.plusDays(1).atStartOfDay();
+
+            return em.createQuery(
+                            "SELECT sc FROM SuatChieu sc " +
+                                    "JOIN FETCH sc.phim " +
+                                    "WHERE sc.ngayGioChieu >= :from AND sc.ngayGioChieu < :to " +
+                                    "ORDER BY sc.ngayGioChieu ASC",
+                            SuatChieu.class
+                    ).setParameter("from", from)
+                    .setParameter("to", to)
+                    .getResultList();
+        } finally {
+            em.close();
+        }
+    }
+
+    /**
+     * Tìm suất chiếu theo phòng và ngày.
+     * Dùng cho check trùng lịch ở service.
+     */
+    public List<SuatChieu> findByPhongAndNgay(String maPhongChieu, LocalDate ngay) {
+        EntityManager em = JpaUtil.getEntityManager();
+        try {
+            LocalDateTime from = ngay.atStartOfDay();
+            LocalDateTime to = ngay.plusDays(1).atStartOfDay();
+
+            return em.createQuery(
+                            "SELECT sc FROM SuatChieu sc " +
+                                    "JOIN FETCH sc.phim " +
+                                    "WHERE sc.maPhongChieu = :maPhongChieu " +
+                                    "AND sc.ngayGioChieu >= :from AND sc.ngayGioChieu < :to " +
+                                    "ORDER BY sc.ngayGioChieu ASC",
+                            SuatChieu.class
+                    ).setParameter("maPhongChieu", maPhongChieu)
+                    .setParameter("from", from)
+                    .setParameter("to", to)
+                    .getResultList();
+        } finally {
+            em.close();
+        }
+    }
+
+    /**
+     * Tìm suất chiếu theo trạng thái.
+     */
+    public List<SuatChieu> findByTrangThai(TrangThaiSuatChieu trangThaiSuatChieu) {
+        EntityManager em = JpaUtil.getEntityManager();
+        try {
+            return em.createQuery(
+                            "SELECT sc FROM SuatChieu sc " +
+                                    "JOIN FETCH sc.phim " +
+                                    "WHERE sc.trangThaiSuatChieu = :trangThai " +
+                                    "ORDER BY sc.ngayGioChieu ASC",
+                            SuatChieu.class
+                    ).setParameter("trangThai", trangThaiSuatChieu)
+                    .getResultList();
+        } finally {
+            em.close();
+        }
+    }
+
+    /**
+     * Lấy các suất còn có ý nghĩa cho đặt vé.
+     */
+    public List<SuatChieu> findAllForBooking() {
+        EntityManager em = JpaUtil.getEntityManager();
+        try {
+            return em.createQuery(
+                            "SELECT sc FROM SuatChieu sc " +
+                                    "JOIN FETCH sc.phim " +
+                                    "WHERE sc.trangThaiSuatChieu = :trangThai " +
+                                    "ORDER BY sc.ngayGioChieu ASC",
+                            SuatChieu.class
+                    ).setParameter("trangThai", TrangThaiSuatChieu.DANG_MO_BAN)
+                    .getResultList();
+        } finally {
+            em.close();
+        }
+    }
+
+    /**
+     * Thêm suất chiếu mới.
      */
     public boolean save(SuatChieu suatChieu) {
         EntityManager em = JpaUtil.getEntityManager();
@@ -69,10 +181,7 @@ public class SuatChieuDao {
     }
 
     /**
-     * Cập nhật thông tin suất chiếu.
-     *
-     * @param suatChieu đối tượng suất chiếu cần cập nhật
-     * @return true nếu cập nhật thành công, ngược lại false
+     * Cập nhật suất chiếu.
      */
     public boolean update(SuatChieu suatChieu) {
         EntityManager em = JpaUtil.getEntityManager();
@@ -95,23 +204,29 @@ public class SuatChieuDao {
     }
 
     /**
-     * Xóa suất chiếu theo mã suất.
-     *
-     * @param maSuat mã suất chiếu cần xóa
-     * @return true nếu xóa thành công, ngược lại false
+     * Không xóa cứng suất chiếu.
+     * Giữ tên hàm delete để code cũ ít bị vỡ, nhưng thực tế là chuyển trạng thái sang HUY.
      */
-    public boolean delete(String maSuat) {
+    public boolean delete(String maSuatChieu) {
+        return updateTrangThai(maSuatChieu, TrangThaiSuatChieu.HUY);
+    }
+
+    /**
+     * Cập nhật trạng thái suất chiếu.
+     */
+    public boolean updateTrangThai(String maSuatChieu, TrangThaiSuatChieu trangThaiSuatChieu) {
         EntityManager em = JpaUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
 
         try {
-            SuatChieu suatChieu = em.find(SuatChieu.class, maSuat);
+            SuatChieu suatChieu = em.find(SuatChieu.class, maSuatChieu);
             if (suatChieu == null) {
                 return false;
             }
 
             tx.begin();
-            em.remove(suatChieu);
+            suatChieu.setTrangThaiSuatChieu(trangThaiSuatChieu);
+            em.merge(suatChieu);
             tx.commit();
             return true;
         } catch (Exception e) {
@@ -126,50 +241,9 @@ public class SuatChieuDao {
     }
 
     /**
-     * Tìm danh sách suất chiếu theo mã phim.
-     *
-     * @param maPhim mã phim
-     * @return danh sách suất chiếu thuộc phim đó
+     * Kiểm tra mã suất chiếu tồn tại chưa.
      */
-    public List<SuatChieu> findByMaPhim(String maPhim) {
-        EntityManager em = JpaUtil.getEntityManager();
-        try {
-            return em.createQuery(
-                            "SELECT sc FROM SuatChieu sc WHERE sc.phim.maPhim = :maPhim ORDER BY sc.ngayChieu, sc.gioBatDau",
-                            SuatChieu.class
-                    ).setParameter("maPhim", maPhim)
-                    .getResultList();
-        } finally {
-            em.close();
-        }
-    }
-
-    /**
-     * Tìm danh sách suất chiếu theo ngày chiếu.
-     *
-     * @param ngayChieu ngày chiếu
-     * @return danh sách suất chiếu trong ngày đó
-     */
-    public List<SuatChieu> findByNgayChieu(LocalDate ngayChieu) {
-        EntityManager em = JpaUtil.getEntityManager();
-        try {
-            return em.createQuery(
-                            "SELECT sc FROM SuatChieu sc WHERE sc.ngayChieu = :ngayChieu ORDER BY sc.gioBatDau",
-                            SuatChieu.class
-                    ).setParameter("ngayChieu", ngayChieu)
-                    .getResultList();
-        } finally {
-            em.close();
-        }
-    }
-
-    /**
-     * Kiểm tra mã suất chiếu đã tồn tại hay chưa.
-     *
-     * @param maSuat mã suất chiếu
-     * @return true nếu đã tồn tại, ngược lại false
-     */
-    public boolean existsById(String maSuat) {
-        return findById(maSuat) != null;
+    public boolean existsById(String maSuatChieu) {
+        return findById(maSuatChieu) != null;
     }
 }
