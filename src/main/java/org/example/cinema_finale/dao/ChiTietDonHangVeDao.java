@@ -177,4 +177,33 @@ public class ChiTietDonHangVeDao {
     public boolean existsByMaVe(String maVe) {
         return findByMaVe(maVe) != null;
     }
+
+    public ChiTietDonHangVe findByMaDonHangAndMaVe(EntityManager em, String maDonHang, String maVe) {
+        try {
+            return em.createQuery(
+                            "SELECT ct FROM ChiTietDonHangVe ct " +
+                                    "JOIN FETCH ct.donHang " +
+                                    "JOIN FETCH ct.ve v " +
+                                    "JOIN FETCH v.loaiVe " +
+                                    "JOIN FETCH v.suatChieu sc " +
+                                    "JOIN FETCH sc.phim " +
+                                    "WHERE ct.donHang.maDonHang = :maDonHang " +
+                                    "AND ct.ve.maVe = :maVe",
+                            ChiTietDonHangVe.class
+                    ).setParameter("maDonHang", maDonHang)
+                    .setParameter("maVe", maVe)
+                    .getSingleResult();
+        } catch (NoResultException e) {
+            return null;
+        }
+    }
+
+    public boolean delete(EntityManager em, ChiTietDonHangVe chiTiet) {
+        if (chiTiet == null) {
+            return false;
+        }
+        ChiTietDonHangVe managed = em.contains(chiTiet) ? chiTiet : em.merge(chiTiet);
+        em.remove(managed);
+        return true;
+    }
 }
