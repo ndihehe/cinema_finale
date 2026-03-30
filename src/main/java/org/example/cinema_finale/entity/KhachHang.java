@@ -6,6 +6,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
+import java.time.LocalDate;
+
 @Entity
 @Table(name = "khach_hang")
 public class KhachHang {
@@ -23,11 +25,23 @@ public class KhachHang {
     @Column(name = "email", length = 100)
     private String email;
 
-    @Column(name = "diem_tich_luy")
-    private Integer diemTichLuy;
+    @Column(name = "gioi_tinh", length = 10)
+    private String gioiTinh;
 
-    @Column(name = "trang_thai", nullable = false)
-    private Boolean trangThai;
+    @Column(name = "ngay_sinh")
+    private LocalDate ngaySinh;
+
+    @Column(name = "dia_chi", length = 255)
+    private String diaChi;
+
+    @Column(name = "diem_tich_luy", nullable = false)
+    private Integer diemTichLuy = 0;
+
+    @Column(name = "hang_thanh_vien", length = 30)
+    private String hangThanhVien;
+
+    @Column(name = "ngay_tao")
+    private LocalDate ngayTao;
 
     @OneToOne(mappedBy = "khachHang")
     private TaiKhoan taiKhoan;
@@ -35,13 +49,19 @@ public class KhachHang {
     public KhachHang() {
     }
 
-    public KhachHang(String maKh, String tenKh, String soDienThoai, String email, Integer diemTichLuy, Boolean trangThai) {
+    public KhachHang(String maKh, String tenKh, String soDienThoai, String email,
+                     String gioiTinh, LocalDate ngaySinh, String diaChi,
+                     Integer diemTichLuy, String hangThanhVien, LocalDate ngayTao) {
         this.maKh = maKh;
         this.tenKh = tenKh;
         this.soDienThoai = soDienThoai;
         this.email = email;
+        this.gioiTinh = gioiTinh;
+        this.ngaySinh = ngaySinh;
+        this.diaChi = diaChi;
         this.diemTichLuy = diemTichLuy;
-        this.trangThai = trangThai;
+        this.hangThanhVien = hangThanhVien;
+        this.ngayTao = ngayTao;
     }
 
     public String getMaKh() {
@@ -76,6 +96,30 @@ public class KhachHang {
         this.email = email;
     }
 
+    public String getGioiTinh() {
+        return gioiTinh;
+    }
+
+    public void setGioiTinh(String gioiTinh) {
+        this.gioiTinh = gioiTinh;
+    }
+
+    public LocalDate getNgaySinh() {
+        return ngaySinh;
+    }
+
+    public void setNgaySinh(LocalDate ngaySinh) {
+        this.ngaySinh = ngaySinh;
+    }
+
+    public String getDiaChi() {
+        return diaChi;
+    }
+
+    public void setDiaChi(String diaChi) {
+        this.diaChi = diaChi;
+    }
+
     public Integer getDiemTichLuy() {
         return diemTichLuy;
     }
@@ -84,12 +128,20 @@ public class KhachHang {
         this.diemTichLuy = diemTichLuy;
     }
 
-    public Boolean getTrangThai() {
-        return trangThai;
+    public String getHangThanhVien() {
+        return hangThanhVien;
     }
 
-    public void setTrangThai(Boolean trangThai) {
-        this.trangThai = trangThai;
+    public void setHangThanhVien(String hangThanhVien) {
+        this.hangThanhVien = hangThanhVien;
+    }
+
+    public LocalDate getNgayTao() {
+        return ngayTao;
+    }
+
+    public void setNgayTao(LocalDate ngayTao) {
+        this.ngayTao = ngayTao;
     }
 
     public TaiKhoan getTaiKhoan() {
@@ -107,8 +159,12 @@ public class KhachHang {
                 ", tenKh='" + tenKh + '\'' +
                 ", soDienThoai='" + soDienThoai + '\'' +
                 ", email='" + email + '\'' +
+                ", gioiTinh='" + gioiTinh + '\'' +
+                ", ngaySinh=" + ngaySinh +
+                ", diaChi='" + diaChi + '\'' +
                 ", diemTichLuy=" + diemTichLuy +
-                ", trangThai=" + trangThai +
+                ", hangThanhVien='" + hangThanhVien + '\'' +
+                ", ngayTao=" + ngayTao +
                 '}';
     }
 }

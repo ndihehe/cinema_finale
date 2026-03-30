@@ -1,98 +1,69 @@
-
 package org.example.cinema_finale.service;
 
-import org.example.cinema_finale.util.AuthorizationUtil;
 import org.example.cinema_finale.dao.PhimDao;
 import org.example.cinema_finale.entity.Phim;
+import org.example.cinema_finale.enums.TrangThaiPhim;
+import org.example.cinema_finale.util.AuthorizationUtil;
 
-import java.time.Year;
+import java.time.LocalDate;
 import java.util.List;
 
 public class PhimService {
 
     private final PhimDao phimDao;
 
-    /**
-     * Khởi tạo service với PhimDao mặc định.
-     */
     public PhimService() {
         this.phimDao = new PhimDao();
     }
 
-    /**
-     * Khởi tạo service với PhimDao truyền vào.
-     *
-     * @param phimDao đối tượng PhimDao
-     */
     public PhimService(PhimDao phimDao) {
         this.phimDao = phimDao;
     }
 
-    /**
-     * Lấy toàn bộ danh sách phim.
-     *
-     * @return danh sách phim
-     */
     public List<Phim> getAllPhim() {
         return phimDao.findAll();
     }
 
-    /**
-     * Tìm phim theo mã.
-     *
-     * @param maPhim mã phim
-     * @return đối tượng phim nếu tìm thấy, ngược lại trả về null
-     */
+    public List<Phim> getAllPhimForBooking() {
+        return phimDao.findAllForBooking();
+    }
+
     public Phim getPhimById(String maPhim) {
-        if (maPhim == null || maPhim.trim().isEmpty()) {
+        if (isBlank(maPhim)) {
             return null;
         }
         return phimDao.findById(maPhim.trim());
     }
 
-    /**
-     * Tìm danh sách phim theo tên gần đúng.
-     *
-     * @param tuKhoa từ khóa tìm kiếm
-     * @return danh sách phim phù hợp
-     */
     public List<Phim> searchByTenPhim(String tuKhoa) {
-        if (tuKhoa == null) {
-            tuKhoa = "";
-        }
-        return phimDao.findByTenPhim(tuKhoa.trim());
+        return phimDao.findByTenPhim(tuKhoa == null ? "" : tuKhoa.trim());
     }
 
-    /**
-     * Thêm mới phim sau khi kiểm tra dữ liệu hợp lệ.
-     *
-     * @param phim đối tượng phim cần thêm
-     * @return thông báo kết quả xử lý
-     */
+    public List<Phim> getByTrangThai(TrangThaiPhim trangThaiPhim) {
+        if (trangThaiPhim == null) {
+            return List.of();
+        }
+        return phimDao.findByTrangThai(trangThaiPhim);
+    }
+
     public String addPhim(Phim phim) {
         AuthorizationUtil.requireStaff();
 
-        String validationMessage = validatePhim(phim, true);
-        if (validationMessage != null) {
-            return validationMessage;
+        String validation = validatePhim(phim, true);
+        if (validation != null) {
+            return validation;
         }
 
         boolean result = phimDao.save(phim);
         return result ? "Thêm phim thành công." : "Thêm phim thất bại.";
     }
 
-    /**
-     * Cập nhật phim sau khi kiểm tra dữ liệu hợp lệ.
-     *
-     * @param phim đối tượng phim cần cập nhật
-     * @return thông báo kết quả xử lý
-     */
     public String updatePhim(Phim phim) {
         AuthorizationUtil.requireStaff();
 
-        String validationMessage = validatePhim(phim, false);
-        if (validationMessage != null) {
-            return validationMessage;
+        String validation = validatePhim(phim, false);
+        if (validation != null) {
+            return validation;
         }
 
         boolean result = phimDao.update(phim);
@@ -100,15 +71,17 @@ public class PhimService {
     }
 
     /**
-     * Xóa phim theo mã phim.
-     *
-     * @param maPhim mã phim cần xóa
-     * @return thông báo kết quả xử lý
+     * Giữ tên hàm cũ để UI/controller cũ ít bị vỡ.
+     * Nhưng thực tế không xóa cứng, chỉ chuyển trạng thái NGUNG_CHIEU.
      */
     public String deletePhim(String maPhim) {
+        return stopPhim(maPhim);
+    }
+
+    public String stopPhim(String maPhim) {
         AuthorizationUtil.requireStaff();
 
-        if (maPhim == null || maPhim.trim().isEmpty()) {
+        if (isBlank(maPhim)) {
             return "Mã phim không được để trống.";
         }
 
@@ -117,55 +90,92 @@ public class PhimService {
             return "Phim không tồn tại.";
         }
 
-        boolean result = phimDao.delete(maPhim.trim());
-        return result ? "Xóa phim thành công." : "Xóa phim thất bại.";
+        boolean result = phimDao.updateTrangThai(maPhim.trim(), TrangThaiPhim.NGUNG_CHIEU);
+        return result ? "Ngừng chiếu phim thành công." : "Cập nhật trạng thái phim thất bại.";
     }
 
-    /**
-     * Kiểm tra dữ liệu phim có hợp lệ hay không.
-     *
-     * @param phim đối tượng phim cần kiểm tra
-     * @param isCreate true nếu là thêm mới, false nếu là cập nhật
-     * @return null nếu hợp lệ, ngược lại trả về thông báo lỗi
-     */
+    public String updateTrangThai(String maPhim, TrangThaiPhim trangThaiPhim) {
+        AuthorizationUtil.requireStaff();
+
+        if (isBlank(maPhim)) {
+            return "Mã phim không được để trống.";
+        }
+
+        if (trangThaiPhim == null) {
+            return "Trạng thái phim không hợp lệ.";
+        }
+
+        Phim phim = phimDao.findById(maPhim.trim());
+        if (phim == null) {
+            return "Phim không tồn tại.";
+        }
+
+        boolean result = phimDao.updateTrangThai(maPhim.trim(), trangThaiPhim);
+        return result ? "Cập nhật trạng thái phim thành công." : "Cập nhật trạng thái phim thất bại.";
+    }
+
     private String validatePhim(Phim phim, boolean isCreate) {
         if (phim == null) {
             return "Dữ liệu phim không hợp lệ.";
         }
 
-        if (phim.getMaPhim() == null || phim.getMaPhim().trim().isEmpty()) {
+        if (isBlank(phim.getMaPhim())) {
             return "Mã phim không được để trống.";
         }
 
-        if (phim.getTenPhim() == null || phim.getTenPhim().trim().isEmpty()) {
+        if (isBlank(phim.getTenPhim())) {
             return "Tên phim không được để trống.";
+        }
+
+        if (isBlank(phim.getTheLoai())) {
+            return "Thể loại không được để trống.";
+        }
+
+        if (isBlank(phim.getDaoDien())) {
+            return "Đạo diễn không được để trống.";
         }
 
         if (phim.getThoiLuong() == null || phim.getThoiLuong() <= 0) {
             return "Thời lượng phim phải lớn hơn 0.";
         }
 
-        int currentYear = Year.now().getValue();
-        if (phim.getNamSanXuat() == null || phim.getNamSanXuat() < 1900 || phim.getNamSanXuat() > currentYear + 1) {
-            return "Năm sản xuất không hợp lệ.";
+        if (phim.getTrangThaiPhim() == null) {
+            return "Trạng thái phim không được để trống.";
         }
 
-        if (phim.getDaoDien() == null || phim.getDaoDien().trim().isEmpty()) {
-            return "Đạo diễn không được để trống.";
-        }
-
-        if (isCreate && phimDao.existsById(phim.getMaPhim().trim())) {
-            return "Mã phim đã tồn tại.";
-        }
-
-        if (!isCreate && phimDao.findById(phim.getMaPhim().trim()) == null) {
-            return "Phim không tồn tại để cập nhật.";
+        if (phim.getNgayKhoiChieu() != null
+                && phim.getNgayKhoiChieu().isAfter(LocalDate.now().plusYears(2))) {
+            return "Ngày khởi chiếu không hợp lệ.";
         }
 
         phim.setMaPhim(phim.getMaPhim().trim());
         phim.setTenPhim(phim.getTenPhim().trim());
+        phim.setTheLoai(phim.getTheLoai().trim());
         phim.setDaoDien(phim.getDaoDien().trim());
+        phim.setGioiHanTuoi(trimToNull(phim.getGioiHanTuoi()));
+        phim.setDinhDang(trimToNull(phim.getDinhDang()));
+        phim.setMoTa(trimToNull(phim.getMoTa()));
+
+        if (isCreate && phimDao.existsById(phim.getMaPhim())) {
+            return "Mã phim đã tồn tại.";
+        }
+
+        if (!isCreate && phimDao.findById(phim.getMaPhim()) == null) {
+            return "Phim không tồn tại để cập nhật.";
+        }
 
         return null;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

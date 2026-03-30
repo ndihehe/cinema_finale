@@ -8,6 +8,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import org.example.cinema_finale.enums.TrangThaiTaiKhoan;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "tai_khoan")
@@ -20,15 +24,15 @@ public class TaiKhoan {
     @Column(name = "ten_dang_nhap", length = 50, nullable = false, unique = true)
     private String tenDangNhap;
 
-    @Column(name = "mat_khau", length = 100, nullable = false)
+    @Column(name = "mat_khau", length = 255, nullable = false)
     private String matKhau;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "vai_tro", length = 20, nullable = false)
-    private VaiTro vaiTro;
+    @Column(name = "trang_thai_tai_khoan", length = 30, nullable = false)
+    private TrangThaiTaiKhoan trangThaiTaiKhoan;
 
-    @Column(name = "trang_thai", nullable = false)
-    private Boolean trangThai;
+    @Column(name = "lan_dang_nhap_cuoi")
+    private LocalDateTime lanDangNhapCuoi;
 
     @OneToOne
     @JoinColumn(name = "ma_nv", unique = true)
@@ -38,172 +42,110 @@ public class TaiKhoan {
     @JoinColumn(name = "ma_kh", unique = true)
     private KhachHang khachHang;
 
-    /**
-     * Constructor mặc định bắt buộc cho JPA.
-     */
+    @Transient
+    private VaiTro vaiTro;
+
     public TaiKhoan() {
     }
 
-    /**
-     * Constructor khởi tạo thông tin tài khoản.
-     *
-     * @param maTk mã tài khoản
-     * @param tenDangNhap tên đăng nhập
-     * @param matKhau mật khẩu
-     * @param vaiTro vai trò tài khoản
-     * @param trangThai trạng thái tài khoản
-     * @param nhanVien nhân viên liên kết nếu là staff
-     * @param khachHang khách hàng liên kết nếu là user
-     */
-    public TaiKhoan(String maTk, String tenDangNhap, String matKhau, VaiTro vaiTro,
-                    Boolean trangThai, NhanVien nhanVien, KhachHang khachHang) {
+    public TaiKhoan(String maTk, String tenDangNhap, String matKhau,
+                    TrangThaiTaiKhoan trangThaiTaiKhoan, LocalDateTime lanDangNhapCuoi,
+                    NhanVien nhanVien, KhachHang khachHang) {
         this.maTk = maTk;
         this.tenDangNhap = tenDangNhap;
         this.matKhau = matKhau;
-        this.vaiTro = vaiTro;
-        this.trangThai = trangThai;
+        this.trangThaiTaiKhoan = trangThaiTaiKhoan;
+        this.lanDangNhapCuoi = lanDangNhapCuoi;
         this.nhanVien = nhanVien;
         this.khachHang = khachHang;
     }
 
-    /**
-     * Lấy mã tài khoản.
-     *
-     * @return mã tài khoản
-     */
     public String getMaTk() {
         return maTk;
     }
 
-    /**
-     * Gán mã tài khoản.
-     *
-     * @param maTk mã tài khoản
-     */
     public void setMaTk(String maTk) {
         this.maTk = maTk;
     }
 
-    /**
-     * Lấy tên đăng nhập.
-     *
-     * @return tên đăng nhập
-     */
     public String getTenDangNhap() {
         return tenDangNhap;
     }
 
-    /**
-     * Gán tên đăng nhập.
-     *
-     * @param tenDangNhap tên đăng nhập
-     */
     public void setTenDangNhap(String tenDangNhap) {
         this.tenDangNhap = tenDangNhap;
     }
 
-    /**
-     * Lấy mật khẩu.
-     *
-     * @return mật khẩu
-     */
     public String getMatKhau() {
         return matKhau;
     }
 
-    /**
-     * Gán mật khẩu.
-     *
-     * @param matKhau mật khẩu
-     */
     public void setMatKhau(String matKhau) {
         this.matKhau = matKhau;
     }
 
-    /**
-     * Lấy vai trò tài khoản.
-     *
-     * @return vai trò tài khoản
-     */
-    public VaiTro getVaiTro() {
-        return vaiTro;
+    public TrangThaiTaiKhoan getTrangThaiTaiKhoan() {
+        return trangThaiTaiKhoan;
     }
 
-    /**
-     * Gán vai trò tài khoản.
-     *
-     * @param vaiTro vai trò tài khoản
-     */
-    public void setVaiTro(VaiTro vaiTro) {
-        this.vaiTro = vaiTro;
+    public void setTrangThaiTaiKhoan(TrangThaiTaiKhoan trangThaiTaiKhoan) {
+        this.trangThaiTaiKhoan = trangThaiTaiKhoan;
     }
 
-    /**
-     * Lấy trạng thái tài khoản.
-     *
-     * @return true nếu hoạt động, false nếu bị khóa
-     */
-    public Boolean getTrangThai() {
-        return trangThai;
+    public LocalDateTime getLanDangNhapCuoi() {
+        return lanDangNhapCuoi;
     }
 
-    /**
-     * Gán trạng thái tài khoản.
-     *
-     * @param trangThai trạng thái tài khoản
-     */
-    public void setTrangThai(Boolean trangThai) {
-        this.trangThai = trangThai;
+    public void setLanDangNhapCuoi(LocalDateTime lanDangNhapCuoi) {
+        this.lanDangNhapCuoi = lanDangNhapCuoi;
     }
 
-    /**
-     * Lấy nhân viên liên kết với tài khoản.
-     *
-     * @return nhân viên
-     */
     public NhanVien getNhanVien() {
         return nhanVien;
     }
 
-    /**
-     * Gán nhân viên cho tài khoản.
-     *
-     * @param nhanVien nhân viên
-     */
     public void setNhanVien(NhanVien nhanVien) {
         this.nhanVien = nhanVien;
     }
 
-    /**
-     * Lấy khách hàng liên kết với tài khoản.
-     *
-     * @return khách hàng
-     */
     public KhachHang getKhachHang() {
         return khachHang;
     }
 
-    /**
-     * Gán khách hàng cho tài khoản.
-     *
-     * @param khachHang khách hàng
-     */
     public void setKhachHang(KhachHang khachHang) {
         this.khachHang = khachHang;
     }
 
-    /**
-     * Trả về chuỗi mô tả thông tin tài khoản.
-     *
-     * @return thông tin tài khoản dưới dạng chuỗi
-     */
+    public void setVaiTro(VaiTro vaiTro) {
+        this.vaiTro = vaiTro;
+    }
+
+    public VaiTro getVaiTro() {
+        if (nhanVien != null) {
+            return VaiTro.STAFF;
+        }
+        if (khachHang != null) {
+            return VaiTro.USER;
+        }
+        return vaiTro;
+    }
+
+    public boolean isStaff() {
+        return nhanVien != null;
+    }
+
+    public boolean isCustomer() {
+        return khachHang != null;
+    }
+
     @Override
     public String toString() {
         return "TaiKhoan{" +
                 "maTk='" + maTk + '\'' +
                 ", tenDangNhap='" + tenDangNhap + '\'' +
-                ", vaiTro=" + vaiTro +
-                ", trangThai=" + trangThai +
+                ", vaiTro=" + getVaiTro() +
+                ", trangThaiTaiKhoan=" + trangThaiTaiKhoan +
+                ", lanDangNhapCuoi=" + lanDangNhapCuoi +
                 ", maNv='" + (nhanVien != null ? nhanVien.getMaNv() : null) + '\'' +
                 ", maKh='" + (khachHang != null ? khachHang.getMaKh() : null) + '\'' +
                 '}';

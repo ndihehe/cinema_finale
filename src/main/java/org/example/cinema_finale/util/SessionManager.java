@@ -2,10 +2,14 @@ package org.example.cinema_finale.util;
 
 import org.example.cinema_finale.entity.TaiKhoan;
 import org.example.cinema_finale.entity.VaiTro;
+import org.example.cinema_finale.enums.TrangThaiTaiKhoan;
 
-public class SessionManager {
+public final class SessionManager {
 
     private static TaiKhoan currentTaiKhoan;
+
+    private SessionManager() {
+    }
 
     /**
      * Lưu tài khoản đang đăng nhập vào phiên làm việc hiện tại.
@@ -26,6 +30,15 @@ public class SessionManager {
     }
 
     /**
+     * Lấy vai trò hiện tại.
+     *
+     * @return vai trò hiện tại, null nếu chưa đăng nhập
+     */
+    public static VaiTro getCurrentVaiTro() {
+        return currentTaiKhoan != null ? currentTaiKhoan.getVaiTro() : null;
+    }
+
+    /**
      * Xóa thông tin phiên đăng nhập hiện tại.
      */
     public static void clearSession() {
@@ -42,20 +55,39 @@ public class SessionManager {
     }
 
     /**
-     * Kiểm tra tài khoản hiện tại có vai trò STAFF hay không.
+     * Kiểm tra tài khoản hiện tại có đang hoạt động hay không.
      *
-     * @return true nếu là staff, false nếu không phải
+     * @return true nếu tài khoản đang hoạt động
      */
-    public static boolean isStaff() {
-        return currentTaiKhoan != null && currentTaiKhoan.getVaiTro() == VaiTro.STAFF;
+    public static boolean isActiveAccount() {
+        return currentTaiKhoan != null
+                && currentTaiKhoan.getTrangThaiTaiKhoan() == TrangThaiTaiKhoan.HOAT_DONG;
     }
 
     /**
-     * Kiểm tra tài khoản hiện tại có vai trò USER hay không.
+     * Kiểm tra tài khoản hiện tại có vai trò STAFF hay không.
      *
-     * @return true nếu là user, false nếu không phải
+     * @return true nếu là staff
+     */
+    public static boolean isStaff() {
+        return currentTaiKhoan != null && currentTaiKhoan.isStaff();
+    }
+
+    /**
+     * Kiểm tra tài khoản hiện tại có vai trò CUSTOMER hay không.
+     *
+     * @return true nếu là khách hàng
+     */
+    public static boolean isCustomer() {
+        return currentTaiKhoan != null && currentTaiKhoan.isCustomer();
+    }
+
+    /**
+     * Giữ lại để tương thích với code cũ.
+     *
+     * @return true nếu là khách hàng
      */
     public static boolean isUser() {
-        return currentTaiKhoan != null && currentTaiKhoan.getVaiTro() == VaiTro.USER;
+        return isCustomer();
     }
 }
