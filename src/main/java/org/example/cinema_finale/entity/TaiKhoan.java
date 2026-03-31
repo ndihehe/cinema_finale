@@ -1,71 +1,56 @@
 package org.example.cinema_finale.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
-import org.example.cinema_finale.enums.TrangThaiTaiKhoan;
-
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "tai_khoan")
+@Table(
+    name = "TaiKhoan",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "UK_TaiKhoan_TenDangNhap", columnNames = {"TenDangNhap"}),
+        @UniqueConstraint(name = "UK_TaiKhoan_MaNhanVien", columnNames = {"MaNhanVien"}),
+        @UniqueConstraint(name = "UK_TaiKhoan_MaKhachHang", columnNames = {"MaKhachHang"})
+    }
+)
 public class TaiKhoan {
 
     @Id
-    @Column(name = "ma_tk", length = 20, nullable = false)
-    private String maTk;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "MaTaiKhoan")
+    private Integer maTaiKhoan;
 
-    @Column(name = "ten_dang_nhap", length = 50, nullable = false, unique = true)
+    @Column(name = "TenDangNhap", nullable = false, unique = true, length = 50)
     private String tenDangNhap;
 
-    @Column(name = "mat_khau", length = 255, nullable = false)
+    @Column(name = "MatKhau", nullable = false, length = 255)
     private String matKhau;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "trang_thai_tai_khoan", length = 30, nullable = false)
-    private TrangThaiTaiKhoan trangThaiTaiKhoan;
+    @Column(name = "LoaiTaiKhoan", nullable = false, length = 20)
+    private String loaiTaiKhoan;
 
-    @Column(name = "lan_dang_nhap_cuoi")
-    private LocalDateTime lanDangNhapCuoi;
-
-    @OneToOne
-    @JoinColumn(name = "ma_nv", unique = true)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "MaNhanVien", unique = true)
     private NhanVien nhanVien;
 
-    @OneToOne
-    @JoinColumn(name = "ma_kh", unique = true)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "MaKhachHang", unique = true)
     private KhachHang khachHang;
 
-    @Transient
-    private VaiTro vaiTro;
+    @Column(name = "TrangThaiTaiKhoan", nullable = false, length = 30)
+    private String trangThaiTaiKhoan = "Hoạt động";
+
+    @Column(name = "NgayTao", nullable = false)
+    private LocalDateTime ngayTao;
 
     public TaiKhoan() {
     }
 
-    public TaiKhoan(String maTk, String tenDangNhap, String matKhau,
-                    TrangThaiTaiKhoan trangThaiTaiKhoan, LocalDateTime lanDangNhapCuoi,
-                    NhanVien nhanVien, KhachHang khachHang) {
-        this.maTk = maTk;
-        this.tenDangNhap = tenDangNhap;
-        this.matKhau = matKhau;
-        this.trangThaiTaiKhoan = trangThaiTaiKhoan;
-        this.lanDangNhapCuoi = lanDangNhapCuoi;
-        this.nhanVien = nhanVien;
-        this.khachHang = khachHang;
+    public Integer getMaTaiKhoan() {
+        return maTaiKhoan;
     }
 
-    public String getMaTk() {
-        return maTk;
-    }
-
-    public void setMaTk(String maTk) {
-        this.maTk = maTk;
+    public void setMaTaiKhoan(Integer maTaiKhoan) {
+        this.maTaiKhoan = maTaiKhoan;
     }
 
     public String getTenDangNhap() {
@@ -84,20 +69,12 @@ public class TaiKhoan {
         this.matKhau = matKhau;
     }
 
-    public TrangThaiTaiKhoan getTrangThaiTaiKhoan() {
-        return trangThaiTaiKhoan;
+    public String getLoaiTaiKhoan() {
+        return loaiTaiKhoan;
     }
 
-    public void setTrangThaiTaiKhoan(TrangThaiTaiKhoan trangThaiTaiKhoan) {
-        this.trangThaiTaiKhoan = trangThaiTaiKhoan;
-    }
-
-    public LocalDateTime getLanDangNhapCuoi() {
-        return lanDangNhapCuoi;
-    }
-
-    public void setLanDangNhapCuoi(LocalDateTime lanDangNhapCuoi) {
-        this.lanDangNhapCuoi = lanDangNhapCuoi;
+    public void setLoaiTaiKhoan(String loaiTaiKhoan) {
+        this.loaiTaiKhoan = loaiTaiKhoan;
     }
 
     public NhanVien getNhanVien() {
@@ -116,38 +93,19 @@ public class TaiKhoan {
         this.khachHang = khachHang;
     }
 
-    public void setVaiTro(VaiTro vaiTro) {
-        this.vaiTro = vaiTro;
+    public String getTrangThaiTaiKhoan() {
+        return trangThaiTaiKhoan;
     }
 
-    public VaiTro getVaiTro() {
-        if (nhanVien != null) {
-            return VaiTro.STAFF;
-        }
-        if (khachHang != null) {
-            return VaiTro.USER;
-        }
-        return vaiTro;
+    public void setTrangThaiTaiKhoan(String trangThaiTaiKhoan) {
+        this.trangThaiTaiKhoan = trangThaiTaiKhoan;
     }
 
-    public boolean isStaff() {
-        return nhanVien != null;
+    public LocalDateTime getNgayTao() {
+        return ngayTao;
     }
 
-    public boolean isCustomer() {
-        return khachHang != null;
-    }
-
-    @Override
-    public String toString() {
-        return "TaiKhoan{" +
-                "maTk='" + maTk + '\'' +
-                ", tenDangNhap='" + tenDangNhap + '\'' +
-                ", vaiTro=" + getVaiTro() +
-                ", trangThaiTaiKhoan=" + trangThaiTaiKhoan +
-                ", lanDangNhapCuoi=" + lanDangNhapCuoi +
-                ", maNv='" + (nhanVien != null ? nhanVien.getMaNv() : null) + '\'' +
-                ", maKh='" + (khachHang != null ? khachHang.getMaKh() : null) + '\'' +
-                '}';
+    public void setNgayTao(LocalDateTime ngayTao) {
+        this.ngayTao = ngayTao;
     }
 }

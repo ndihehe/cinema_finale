@@ -1,87 +1,67 @@
 package org.example.cinema_finale.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
-import org.example.cinema_finale.enums.TrangThaiLamViec;
-
+import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
-@Table(name = "nhan_vien")
+@Table(name = "NhanVien")
 public class NhanVien {
 
     @Id
-    @Column(name = "ma_nv", length = 20, nullable = false)
-    private String maNv;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "MaNhanVien")
+    private Integer maNhanVien;
 
-    @Column(name = "ten_nv", length = 100, nullable = false)
-    private String tenNv;
+    @Column(name = "HoTen", nullable = false, length = 100)
+    private String hoTen;
 
-    @Column(name = "ngay_sinh")
+    @Column(name = "NgaySinh")
     private LocalDate ngaySinh;
 
-    @Column(name = "gioi_tinh", length = 10)
+    @Column(name = "GioiTinh", length = 10)
     private String gioiTinh;
 
-    @Column(name = "so_dien_thoai", length = 15)
+    @Column(name = "SoDienThoai", nullable = false, unique = true, length = 15)
     private String soDienThoai;
 
-    @Column(name = "email", length = 100)
+    @Column(name = "Email", unique = true, length = 100)
     private String email;
 
-    @Column(name = "dia_chi", length = 255)
+    @Column(name = "DiaChi", length = 255)
     private String diaChi;
 
-    @Column(name = "ma_chuc_vu", length = 20)
-    private String maChucVu;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "MaChucVu", nullable = false)
+    private ChucVu chucVu;
 
-    @Column(name = "ngay_vao_lam")
-    private LocalDate ngayVaoLam;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "trang_thai_lam_viec", length = 30, nullable = false)
-    private TrangThaiLamViec trangThaiLamViec;
+    @Column(name = "TrangThaiLamViec", nullable = false, length = 30)
+    private String trangThaiLamViec = "Đang làm";
 
     @OneToOne(mappedBy = "nhanVien")
     private TaiKhoan taiKhoan;
 
+    @OneToMany(mappedBy = "nhanVien")
+    private List<DonHang> danhSachDonHang = new ArrayList<>();
+
     public NhanVien() {
     }
 
-    public NhanVien(String maNv, String tenNv, LocalDate ngaySinh, String gioiTinh,
-                    String soDienThoai, String email, String diaChi, String maChucVu,
-                    LocalDate ngayVaoLam, TrangThaiLamViec trangThaiLamViec) {
-        this.maNv = maNv;
-        this.tenNv = tenNv;
-        this.ngaySinh = ngaySinh;
-        this.gioiTinh = gioiTinh;
-        this.soDienThoai = soDienThoai;
-        this.email = email;
-        this.diaChi = diaChi;
-        this.maChucVu = maChucVu;
-        this.ngayVaoLam = ngayVaoLam;
-        this.trangThaiLamViec = trangThaiLamViec;
+    public Integer getMaNhanVien() {
+        return maNhanVien;
     }
 
-    public String getMaNv() {
-        return maNv;
+    public void setMaNhanVien(Integer maNhanVien) {
+        this.maNhanVien = maNhanVien;
     }
 
-    public void setMaNv(String maNv) {
-        this.maNv = maNv;
+    public String getHoTen() {
+        return hoTen;
     }
 
-    public String getTenNv() {
-        return tenNv;
-    }
-
-    public void setTenNv(String tenNv) {
-        this.tenNv = tenNv;
+    public void setHoTen(String hoTen) {
+        this.hoTen = hoTen;
     }
 
     public LocalDate getNgaySinh() {
@@ -124,27 +104,19 @@ public class NhanVien {
         this.diaChi = diaChi;
     }
 
-    public String getMaChucVu() {
-        return maChucVu;
+    public ChucVu getChucVu() {
+        return chucVu;
     }
 
-    public void setMaChucVu(String maChucVu) {
-        this.maChucVu = maChucVu;
+    public void setChucVu(ChucVu chucVu) {
+        this.chucVu = chucVu;
     }
 
-    public LocalDate getNgayVaoLam() {
-        return ngayVaoLam;
-    }
-
-    public void setNgayVaoLam(LocalDate ngayVaoLam) {
-        this.ngayVaoLam = ngayVaoLam;
-    }
-
-    public TrangThaiLamViec getTrangThaiLamViec() {
+    public String getTrangThaiLamViec() {
         return trangThaiLamViec;
     }
 
-    public void setTrangThaiLamViec(TrangThaiLamViec trangThaiLamViec) {
+    public void setTrangThaiLamViec(String trangThaiLamViec) {
         this.trangThaiLamViec = trangThaiLamViec;
     }
 
@@ -156,19 +128,11 @@ public class NhanVien {
         this.taiKhoan = taiKhoan;
     }
 
-    @Override
-    public String toString() {
-        return "NhanVien{" +
-                "maNv='" + maNv + '\'' +
-                ", tenNv='" + tenNv + '\'' +
-                ", ngaySinh=" + ngaySinh +
-                ", gioiTinh='" + gioiTinh + '\'' +
-                ", soDienThoai='" + soDienThoai + '\'' +
-                ", email='" + email + '\'' +
-                ", diaChi='" + diaChi + '\'' +
-                ", maChucVu='" + maChucVu + '\'' +
-                ", ngayVaoLam=" + ngayVaoLam +
-                ", trangThaiLamViec=" + trangThaiLamViec +
-                '}';
+    public List<DonHang> getDanhSachDonHang() {
+        return danhSachDonHang;
+    }
+
+    public void setDanhSachDonHang(List<DonHang> danhSachDonHang) {
+        this.danhSachDonHang = danhSachDonHang;
     }
 }

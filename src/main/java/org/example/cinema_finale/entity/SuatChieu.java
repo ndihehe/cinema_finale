@@ -1,65 +1,101 @@
 package org.example.cinema_finale.entity;
 
 import jakarta.persistence.*;
-import org.example.cinema_finale.enums.TrangThaiSuatChieu;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
-@Table(name = "suat_chieu")
+@Table(
+    name = "SuatChieu",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "UK_SuatChieu_Phong_ThoiGian", columnNames = {"MaPhongChieu", "NgayGioChieu"})
+    }
+)
 public class SuatChieu {
 
     @Id
-    @Column(name = "ma_suat_chieu", length = 20, nullable = false)
-    private String maSuatChieu;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "MaSuatChieu")
+    private Integer maSuatChieu;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ma_phim", nullable = false)
+    @JoinColumn(name = "MaPhim", nullable = false)
     private Phim phim;
 
-    @Column(name = "ma_phong_chieu", length = 20, nullable = false)
-    private String maPhongChieu;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "MaPhongChieu", nullable = false)
+    private PhongChieu phongChieu;
 
-    @Column(name = "ngay_gio_chieu", nullable = false)
+    @Column(name = "NgayGioChieu", nullable = false)
     private LocalDateTime ngayGioChieu;
 
-    @Column(name = "gia_ve_co_ban", precision = 12, scale = 2, nullable = false)
+    @Column(name = "GiaVeCoBan", nullable = false, precision = 18, scale = 2)
     private BigDecimal giaVeCoBan;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "trang_thai_suat_chieu", length = 30, nullable = false)
-    private TrangThaiSuatChieu trangThaiSuatChieu;
+    @Column(name = "TrangThaiSuatChieu", nullable = false, length = 30)
+    private String trangThaiSuatChieu = "Sắp chiếu";
+
+    @OneToMany(mappedBy = "suatChieu")
+    private List<Ve> danhSachVe = new ArrayList<>();
 
     public SuatChieu() {
     }
 
-    public SuatChieu(String maSuatChieu, Phim phim, String maPhongChieu,
-                     LocalDateTime ngayGioChieu, BigDecimal giaVeCoBan,
-                     TrangThaiSuatChieu trangThaiSuatChieu) {
+    public Integer getMaSuatChieu() {
+        return maSuatChieu;
+    }
+
+    public void setMaSuatChieu(Integer maSuatChieu) {
         this.maSuatChieu = maSuatChieu;
+    }
+
+    public Phim getPhim() {
+        return phim;
+    }
+
+    public void setPhim(Phim phim) {
         this.phim = phim;
-        this.maPhongChieu = maPhongChieu;
+    }
+
+    public PhongChieu getPhongChieu() {
+        return phongChieu;
+    }
+
+    public void setPhongChieu(PhongChieu phongChieu) {
+        this.phongChieu = phongChieu;
+    }
+
+    public LocalDateTime getNgayGioChieu() {
+        return ngayGioChieu;
+    }
+
+    public void setNgayGioChieu(LocalDateTime ngayGioChieu) {
         this.ngayGioChieu = ngayGioChieu;
+    }
+
+    public BigDecimal getGiaVeCoBan() {
+        return giaVeCoBan;
+    }
+
+    public void setGiaVeCoBan(BigDecimal giaVeCoBan) {
         this.giaVeCoBan = giaVeCoBan;
+    }
+
+    public String getTrangThaiSuatChieu() {
+        return trangThaiSuatChieu;
+    }
+
+    public void setTrangThaiSuatChieu(String trangThaiSuatChieu) {
         this.trangThaiSuatChieu = trangThaiSuatChieu;
     }
 
-    public String getMaSuatChieu() { return maSuatChieu; }
-    public void setMaSuatChieu(String maSuatChieu) { this.maSuatChieu = maSuatChieu; }
+    public List<Ve> getDanhSachVe() {
+        return danhSachVe;
+    }
 
-    public Phim getPhim() { return phim; }
-    public void setPhim(Phim phim) { this.phim = phim; }
-
-    public String getMaPhongChieu() { return maPhongChieu; }
-    public void setMaPhongChieu(String maPhongChieu) { this.maPhongChieu = maPhongChieu; }
-
-    public LocalDateTime getNgayGioChieu() { return ngayGioChieu; }
-    public void setNgayGioChieu(LocalDateTime ngayGioChieu) { this.ngayGioChieu = ngayGioChieu; }
-
-    public BigDecimal getGiaVeCoBan() { return giaVeCoBan; }
-    public void setGiaVeCoBan(BigDecimal giaVeCoBan) { this.giaVeCoBan = giaVeCoBan; }
-
-    public TrangThaiSuatChieu getTrangThaiSuatChieu() { return trangThaiSuatChieu; }
-    public void setTrangThaiSuatChieu(TrangThaiSuatChieu trangThaiSuatChieu) { this.trangThaiSuatChieu = trangThaiSuatChieu; }
+    public void setDanhSachVe(List<Ve> danhSachVe) {
+        this.danhSachVe = danhSachVe;
+    }
 }

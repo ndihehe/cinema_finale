@@ -15,11 +15,18 @@ public class ChiTietDonHangVeDao {
         try {
             return em.createQuery(
                     "SELECT ct FROM ChiTietDonHangVe ct " +
-                            "JOIN FETCH ct.donHang " +
+                            "JOIN FETCH ct.donHang dh " +
+                            "LEFT JOIN FETCH dh.khachHang " +
+                            "JOIN FETCH dh.nhanVien " +
+                            "LEFT JOIN FETCH dh.khuyenMai " +
                             "JOIN FETCH ct.ve v " +
                             "JOIN FETCH v.loaiVe " +
+                            "JOIN FETCH v.gheNgoi g " +
+                            "JOIN FETCH g.phongChieu " +
+                            "JOIN FETCH g.loaiGheNgoi " +
                             "JOIN FETCH v.suatChieu sc " +
                             "JOIN FETCH sc.phim " +
+                            "JOIN FETCH sc.phongChieu " +
                             "ORDER BY ct.maChiTietVe ASC",
                     ChiTietDonHangVe.class
             ).getResultList();
@@ -28,7 +35,7 @@ public class ChiTietDonHangVeDao {
         }
     }
 
-    public ChiTietDonHangVe findById(String maChiTietVe) {
+    public ChiTietDonHangVe findById(Integer maChiTietVe) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return findById(em, maChiTietVe);
@@ -37,15 +44,22 @@ public class ChiTietDonHangVeDao {
         }
     }
 
-    public ChiTietDonHangVe findById(EntityManager em, String maChiTietVe) {
+    public ChiTietDonHangVe findById(EntityManager em, Integer maChiTietVe) {
         try {
             return em.createQuery(
                             "SELECT ct FROM ChiTietDonHangVe ct " +
-                                    "JOIN FETCH ct.donHang " +
+                                    "JOIN FETCH ct.donHang dh " +
+                                    "LEFT JOIN FETCH dh.khachHang " +
+                                    "JOIN FETCH dh.nhanVien " +
+                                    "LEFT JOIN FETCH dh.khuyenMai " +
                                     "JOIN FETCH ct.ve v " +
                                     "JOIN FETCH v.loaiVe " +
+                                    "JOIN FETCH v.gheNgoi g " +
+                                    "JOIN FETCH g.phongChieu " +
+                                    "JOIN FETCH g.loaiGheNgoi " +
                                     "JOIN FETCH v.suatChieu sc " +
                                     "JOIN FETCH sc.phim " +
+                                    "JOIN FETCH sc.phongChieu " +
                                     "WHERE ct.maChiTietVe = :maChiTietVe",
                             ChiTietDonHangVe.class
                     ).setParameter("maChiTietVe", maChiTietVe)
@@ -55,7 +69,7 @@ public class ChiTietDonHangVeDao {
         }
     }
 
-    public List<ChiTietDonHangVe> findByMaDonHang(String maDonHang) {
+    public List<ChiTietDonHangVe> findByMaDonHang(Integer maDonHang) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return findByMaDonHang(em, maDonHang);
@@ -64,14 +78,21 @@ public class ChiTietDonHangVeDao {
         }
     }
 
-    public List<ChiTietDonHangVe> findByMaDonHang(EntityManager em, String maDonHang) {
+    public List<ChiTietDonHangVe> findByMaDonHang(EntityManager em, Integer maDonHang) {
         return em.createQuery(
                         "SELECT ct FROM ChiTietDonHangVe ct " +
-                                "JOIN FETCH ct.donHang " +
+                                "JOIN FETCH ct.donHang dh " +
+                                "LEFT JOIN FETCH dh.khachHang " +
+                                "JOIN FETCH dh.nhanVien " +
+                                "LEFT JOIN FETCH dh.khuyenMai " +
                                 "JOIN FETCH ct.ve v " +
                                 "JOIN FETCH v.loaiVe " +
+                                "JOIN FETCH v.gheNgoi g " +
+                                "JOIN FETCH g.phongChieu " +
+                                "JOIN FETCH g.loaiGheNgoi " +
                                 "JOIN FETCH v.suatChieu sc " +
                                 "JOIN FETCH sc.phim " +
+                                "JOIN FETCH sc.phongChieu " +
                                 "WHERE ct.donHang.maDonHang = :maDonHang " +
                                 "ORDER BY ct.maChiTietVe ASC",
                         ChiTietDonHangVe.class
@@ -79,7 +100,7 @@ public class ChiTietDonHangVeDao {
                 .getResultList();
     }
 
-    public ChiTietDonHangVe findByMaVe(String maVe) {
+    public ChiTietDonHangVe findByMaVe(Integer maVe) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return findByMaVe(em, maVe);
@@ -88,15 +109,22 @@ public class ChiTietDonHangVeDao {
         }
     }
 
-    public ChiTietDonHangVe findByMaVe(EntityManager em, String maVe) {
+    public ChiTietDonHangVe findByMaVe(EntityManager em, Integer maVe) {
         try {
             return em.createQuery(
                             "SELECT ct FROM ChiTietDonHangVe ct " +
-                                    "JOIN FETCH ct.donHang " +
+                                    "JOIN FETCH ct.donHang dh " +
+                                    "LEFT JOIN FETCH dh.khachHang " +
+                                    "JOIN FETCH dh.nhanVien " +
+                                    "LEFT JOIN FETCH dh.khuyenMai " +
                                     "JOIN FETCH ct.ve v " +
                                     "JOIN FETCH v.loaiVe " +
+                                    "JOIN FETCH v.gheNgoi g " +
+                                    "JOIN FETCH g.phongChieu " +
+                                    "JOIN FETCH g.loaiGheNgoi " +
                                     "JOIN FETCH v.suatChieu sc " +
                                     "JOIN FETCH sc.phim " +
+                                    "JOIN FETCH sc.phongChieu " +
                                     "WHERE ct.ve.maVe = :maVe",
                             ChiTietDonHangVe.class
                     ).setParameter("maVe", maVe)
@@ -144,7 +172,7 @@ public class ChiTietDonHangVeDao {
         }
     }
 
-    public boolean delete(String maChiTietVe) {
+    public boolean delete(Integer maChiTietVe) {
         EntityManager em = JpaUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
         try {
@@ -161,7 +189,7 @@ public class ChiTietDonHangVeDao {
         }
     }
 
-    public boolean delete(EntityManager em, String maChiTietVe) {
+    public boolean delete(EntityManager em, Integer maChiTietVe) {
         ChiTietDonHangVe chiTiet = em.find(ChiTietDonHangVe.class, maChiTietVe);
         if (chiTiet == null) {
             return false;
@@ -170,23 +198,30 @@ public class ChiTietDonHangVeDao {
         return true;
     }
 
-    public boolean existsById(String maChiTietVe) {
+    public boolean existsById(Integer maChiTietVe) {
         return findById(maChiTietVe) != null;
     }
 
-    public boolean existsByMaVe(String maVe) {
+    public boolean existsByMaVe(Integer maVe) {
         return findByMaVe(maVe) != null;
     }
 
-    public ChiTietDonHangVe findByMaDonHangAndMaVe(EntityManager em, String maDonHang, String maVe) {
+    public ChiTietDonHangVe findByMaDonHangAndMaVe(EntityManager em, Integer maDonHang, Integer maVe) {
         try {
             return em.createQuery(
                             "SELECT ct FROM ChiTietDonHangVe ct " +
-                                    "JOIN FETCH ct.donHang " +
+                                    "JOIN FETCH ct.donHang dh " +
+                                    "LEFT JOIN FETCH dh.khachHang " +
+                                    "JOIN FETCH dh.nhanVien " +
+                                    "LEFT JOIN FETCH dh.khuyenMai " +
                                     "JOIN FETCH ct.ve v " +
                                     "JOIN FETCH v.loaiVe " +
+                                    "JOIN FETCH v.gheNgoi g " +
+                                    "JOIN FETCH g.phongChieu " +
+                                    "JOIN FETCH g.loaiGheNgoi " +
                                     "JOIN FETCH v.suatChieu sc " +
                                     "JOIN FETCH sc.phim " +
+                                    "JOIN FETCH sc.phongChieu " +
                                     "WHERE ct.donHang.maDonHang = :maDonHang " +
                                     "AND ct.ve.maVe = :maVe",
                             ChiTietDonHangVe.class

@@ -2,18 +2,13 @@ package org.example.cinema_finale.dao;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
-import jakarta.persistence.NoResultException;
 import org.example.cinema_finale.entity.Phim;
-import org.example.cinema_finale.enums.TrangThaiPhim;
 import org.example.cinema_finale.util.JpaUtil;
 
 import java.util.List;
 
 public class PhimDao {
 
-    /**
-     * Lấy toàn bộ danh sách phim.
-     */
     public List<Phim> findAll() {
         EntityManager em = JpaUtil.getEntityManager();
         try {
@@ -26,9 +21,6 @@ public class PhimDao {
         }
     }
 
-    /**
-     * Lấy danh sách phim đang còn ý nghĩa cho nghiệp vụ bán vé.
-     */
     public List<Phim> findAllForBooking() {
         EntityManager em = JpaUtil.getEntityManager();
         try {
@@ -37,18 +29,14 @@ public class PhimDao {
                                     "WHERE p.trangThaiPhim IN :trangThais " +
                                     "ORDER BY p.ngayKhoiChieu DESC, p.tenPhim ASC",
                             Phim.class
-                    ).setParameter("trangThais",
-                            List.of(TrangThaiPhim.SAP_CHIEU, TrangThaiPhim.DANG_CHIEU))
+                    ).setParameter("trangThais", List.of("Sắp chiếu", "Đang chiếu"))
                     .getResultList();
         } finally {
             em.close();
         }
     }
 
-    /**
-     * Tìm phim theo mã phim.
-     */
-    public Phim findById(String maPhim) {
+    public Phim findById(Integer maPhim) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return em.find(Phim.class, maPhim);
@@ -57,9 +45,6 @@ public class PhimDao {
         }
     }
 
-    /**
-     * Tìm phim theo tên gần đúng.
-     */
     public List<Phim> findByTenPhim(String tuKhoa) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
@@ -75,10 +60,7 @@ public class PhimDao {
         }
     }
 
-    /**
-     * Tìm phim theo trạng thái.
-     */
-    public List<Phim> findByTrangThai(TrangThaiPhim trangThaiPhim) {
+    public List<Phim> findByTrangThai(String trangThaiPhim) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return em.createQuery(
@@ -93,9 +75,6 @@ public class PhimDao {
         }
     }
 
-    /**
-     * Thêm phim mới.
-     */
     public boolean save(Phim phim) {
         EntityManager em = JpaUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
@@ -116,9 +95,6 @@ public class PhimDao {
         }
     }
 
-    /**
-     * Cập nhật phim.
-     */
     public boolean update(Phim phim) {
         EntityManager em = JpaUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
@@ -139,18 +115,11 @@ public class PhimDao {
         }
     }
 
-    /**
-     * Không xóa cứng phim.
-     * Giữ tên hàm delete để service cũ ít bị vỡ, nhưng thực tế là chuyển sang NGUNG_CHIEU.
-     */
-    public boolean delete(String maPhim) {
-        return updateTrangThai(maPhim, TrangThaiPhim.NGUNG_CHIEU);
+    public boolean delete(Integer maPhim) {
+        return updateTrangThai(maPhim, "Ngừng chiếu");
     }
 
-    /**
-     * Cập nhật trạng thái phim.
-     */
-    public boolean updateTrangThai(String maPhim, TrangThaiPhim trangThaiPhim) {
+    public boolean updateTrangThai(Integer maPhim, String trangThaiPhim) {
         EntityManager em = JpaUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
 
@@ -176,10 +145,7 @@ public class PhimDao {
         }
     }
 
-    /**
-     * Kiểm tra mã phim tồn tại chưa.
-     */
-    public boolean existsById(String maPhim) {
+    public boolean existsById(Integer maPhim) {
         return findById(maPhim) != null;
     }
 }
