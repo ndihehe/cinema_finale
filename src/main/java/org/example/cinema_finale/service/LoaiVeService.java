@@ -24,10 +24,8 @@ public class LoaiVeService {
     }
 
     public LoaiVe getLoaiVeById(String maLoaiVe) {
-        if (isBlank(maLoaiVe)) {
-            return null;
-        }
-        return loaiVeDao.findById(maLoaiVe.trim());
+        Integer id = parseId(maLoaiVe);
+        return id == null ? null : loaiVeDao.findById(id);
     }
 
     public List<LoaiVe> searchByTenLoaiVe(String tuKhoa) {
@@ -61,16 +59,17 @@ public class LoaiVeService {
     public String deleteLoaiVe(String maLoaiVe) {
         AuthorizationUtil.requireStaff();
 
-        if (isBlank(maLoaiVe)) {
-            return "Mã loại vé không được để trống.";
+        Integer id = parseId(maLoaiVe);
+        if (id == null) {
+            return "Mã loại vé không hợp lệ.";
         }
 
-        LoaiVe loaiVe = loaiVeDao.findById(maLoaiVe.trim());
+        LoaiVe loaiVe = loaiVeDao.findById(id);
         if (loaiVe == null) {
             return "Loại vé không tồn tại.";
         }
 
-        boolean result = loaiVeDao.delete(maLoaiVe.trim());
+        boolean result = loaiVeDao.delete(id);
         return result ? "Xóa loại vé thành công." : "Xóa loại vé thất bại.";
     }
 
@@ -79,8 +78,8 @@ public class LoaiVeService {
             return "Dữ liệu loại vé không hợp lệ.";
         }
 
-        if (isBlank(loaiVe.getMaLoaiVe())) {
-            return "Mã loại vé không được để trống.";
+        if (!isCreate && loaiVe.getMaLoaiVe() == null) {
+            return "Mã loại vé không được để trống khi cập nhật.";
         }
 
         if (isBlank(loaiVe.getTenLoaiVe())) {
@@ -95,19 +94,25 @@ public class LoaiVeService {
             return "Phụ thu giá không được âm.";
         }
 
-        loaiVe.setMaLoaiVe(loaiVe.getMaLoaiVe().trim());
         loaiVe.setTenLoaiVe(loaiVe.getTenLoaiVe().trim());
         loaiVe.setMoTa(trimToNull(loaiVe.getMoTa()));
-
-        if (isCreate && loaiVeDao.existsById(loaiVe.getMaLoaiVe())) {
-            return "Mã loại vé đã tồn tại.";
-        }
 
         if (!isCreate && loaiVeDao.findById(loaiVe.getMaLoaiVe()) == null) {
             return "Loại vé không tồn tại để cập nhật.";
         }
 
         return null;
+    }
+
+    private Integer parseId(String value) {
+        if (isBlank(value)) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private boolean isBlank(String value) {

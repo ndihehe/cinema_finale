@@ -7,8 +7,7 @@ import jakarta.persistence.Persistence;
 public final class JpaUtil {
 
     private static final String PERSISTENCE_UNIT_NAME = "CinemaPU";
-
-    private static final EntityManagerFactory emf = buildEntityManagerFactory();
+    private static volatile EntityManagerFactory emf;
 
     private JpaUtil() {
     }
@@ -18,28 +17,37 @@ public final class JpaUtil {
             return Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME);
         } catch (Exception e) {
             e.printStackTrace();
-            throw new ExceptionInInitializerError("Không thể khởi tạo EntityManagerFactory.");
+            throw new ExceptionInInitializerError("Không thể khởi tạo EntityManagerFactory cho persistence unit: " + PERSISTENCE_UNIT_NAME);
         }
+    }
+
+    private static EntityManagerFactory getEntityManagerFactory() {
+        if (emf == null || !emf.isOpen()) {
+            synchronized (JpaUtil.class) {
+                if (emf == null || !emf.isOpen()) {
+                    emf = buildEntityManagerFactory();
+                }
+            }
+        }
+        return emf;
     }
 
     /**
      * Tạo và trả về một EntityManager mới để thao tác với database.
-     *
-     * @return EntityManager mới
      */
     public static EntityManager getEntityManager() {
-        if (emf == null || !emf.isOpen()) {
-            throw new IllegalStateException("EntityManagerFactory chưa sẵn sàng hoặc đã bị đóng.");
-        }
-        return emf.createEntityManager();
+        return getEntityManagerFactory().createEntityManager();
     }
 
     /**
      * Đóng EntityManagerFactory khi ứng dụng kết thúc.
      */
     public static void close() {
-        if (emf != null && emf.isOpen()) {
-            emf.close();
+        synchronized (JpaUtil.class) {
+            if (emf != null && emf.isOpen()) {
+                emf.close();
+            }
+            emf = null;
         }
     }
 }

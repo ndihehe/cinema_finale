@@ -7,9 +7,6 @@ import org.example.cinema_finale.dao.VeDao;
 import org.example.cinema_finale.entity.ChiTietDonHangVe;
 import org.example.cinema_finale.entity.DonHang;
 import org.example.cinema_finale.entity.ThanhToan;
-import org.example.cinema_finale.enums.TrangThaiDonHang;
-import org.example.cinema_finale.enums.TrangThaiThanhToan;
-import org.example.cinema_finale.enums.TrangThaiVe;
 import org.example.cinema_finale.util.AuthorizationUtil;
 
 import java.math.BigDecimal;
@@ -45,24 +42,21 @@ public class ThanhToanService {
     }
 
     public ThanhToan getThanhToanById(String maThanhToan) {
-        if (isBlank(maThanhToan)) {
-            return null;
-        }
-        return thanhToanDao.findById(maThanhToan.trim());
+        Integer id = parseId(maThanhToan);
+        return id == null ? null : thanhToanDao.findById(id);
     }
 
     public List<ThanhToan> getByMaDonHang(String maDonHang) {
-        if (isBlank(maDonHang)) {
-            return List.of();
-        }
-        return thanhToanDao.findByMaDonHang(maDonHang.trim());
+        Integer id = parseId(maDonHang);
+        return id == null ? List.of() : thanhToanDao.findByMaDonHang(id);
     }
 
-    public List<ThanhToan> getByTrangThai(TrangThaiThanhToan trangThaiThanhToan) {
-        if (trangThaiThanhToan == null) {
+    public List<ThanhToan> getByTrangThai(Object trangThaiThanhToan) {
+        String status = normalizeThanhToanStatus(trangThaiThanhToan);
+        if (status == null) {
             return List.of();
         }
-        return thanhToanDao.findByTrangThai(trangThaiThanhToan);
+        return thanhToanDao.findByTrangThai(status);
     }
 
     public String addThanhToan(ThanhToan thanhToan) {
@@ -79,8 +73,8 @@ public class ThanhToanService {
         }
 
         DonHang donHang = donHangDao.findById(thanhToan.getDonHang().getMaDonHang());
-        if (donHang != null && donHang.getTrangThaiDonHang() == TrangThaiDonHang.KHOI_TAO) {
-            donHangDao.updateTrangThai(donHang.getMaDonHang(), TrangThaiDonHang.CHO_THANH_TOAN);
+        if (donHang != null && "Chưa thanh toán".equalsIgnoreCase(donHang.getTrangThaiDonHang())) {
+            donHangDao.updateTrangThai(donHang.getMaDonHang(), "Chưa thanh toán");
         }
 
         return "Tạo thanh toán thành công.";
@@ -101,11 +95,12 @@ public class ThanhToanService {
     public String confirmThanhToan(String maThanhToan) {
         AuthorizationUtil.requireLogin();
 
-        if (isBlank(maThanhToan)) {
-            return "Mã thanh toán không được để trống.";
+        Integer id = parseId(maThanhToan);
+        if (id == null) {
+            return "Mã thanh toán không hợp lệ.";
         }
 
-        ThanhToan thanhToan = thanhToanDao.findById(maThanhToan.trim());
+        ThanhToan thanhToan = thanhToanDao.findById(id);
         if (thanhToan == null) {
             return "Thanh toán không tồn tại.";
         }
@@ -115,15 +110,15 @@ public class ThanhToanService {
             return "Đơn hàng của thanh toán không tồn tại.";
         }
 
-        if (donHang.getTrangThaiDonHang() == TrangThaiDonHang.DA_HUY) {
+        if ("Đã hủy".equalsIgnoreCase(donHang.getTrangThaiDonHang())) {
             return "Không thể xác nhận thanh toán cho đơn hàng đã hủy.";
         }
 
-        if (thanhToan.getTrangThaiThanhToan() == TrangThaiThanhToan.THANH_CONG) {
+        if ("Thành công".equalsIgnoreCase(thanhToan.getTrangThaiThanhToan())) {
             return "Thanh toán này đã được xác nhận trước đó.";
         }
 
-        thanhToan.setTrangThaiThanhToan(TrangThaiThanhToan.THANH_CONG);
+        thanhToan.setTrangThaiThanhToan("Thành công");
         if (thanhToan.getThoiGianThanhToan() == null) {
             thanhToan.setThoiGianThanhToan(LocalDateTime.now());
         }
@@ -133,14 +128,14 @@ public class ThanhToanService {
             return "Cập nhật trạng thái thanh toán thất bại.";
         }
 
-        boolean updateDonHang = donHangDao.updateTrangThai(donHang.getMaDonHang(), TrangThaiDonHang.DA_THANH_TOAN);
+        boolean updateDonHang = donHangDao.updateTrangThai(donHang.getMaDonHang(), "Đã thanh toán");
         if (!updateDonHang) {
             return "Cập nhật trạng thái đơn hàng thất bại.";
         }
 
         for (ChiTietDonHangVe chiTiet : chiTietDonHangVeDao.findByMaDonHang(donHang.getMaDonHang())) {
             if (chiTiet.getVe() != null) {
-                veDao.updateTrangThai(chiTiet.getVe().getMaVe(), TrangThaiVe.DA_BAN);
+                veDao.updateTrangThai(chiTiet.getVe().getMaVe(), "Đã bán");
             }
         }
 
@@ -150,33 +145,34 @@ public class ThanhToanService {
     public String markThanhToanFailed(String maThanhToan) {
         AuthorizationUtil.requireLogin();
 
-        if (isBlank(maThanhToan)) {
-            return "Mã thanh toán không được để trống.";
+        Integer id = parseId(maThanhToan);
+        if (id == null) {
+            return "Mã thanh toán không hợp lệ.";
         }
 
-        ThanhToan thanhToan = thanhToanDao.findById(maThanhToan.trim());
+        ThanhToan thanhToan = thanhToanDao.findById(id);
         if (thanhToan == null) {
             return "Thanh toán không tồn tại.";
         }
 
-        boolean result = thanhToanDao.updateTrangThai(maThanhToan.trim(), TrangThaiThanhToan.THAT_BAI);
-        return result ? "Đánh dấu thanh toán thất bại thành công."
-                : "Cập nhật trạng thái thanh toán thất bại.";
+        boolean result = thanhToanDao.updateTrangThai(id, "Thất bại");
+        return result ? "Đánh dấu thanh toán thất bại thành công." : "Cập nhật trạng thái thanh toán thất bại.";
     }
 
     public String refundThanhToan(String maThanhToan) {
         AuthorizationUtil.requireStaff();
 
-        if (isBlank(maThanhToan)) {
-            return "Mã thanh toán không được để trống.";
+        Integer id = parseId(maThanhToan);
+        if (id == null) {
+            return "Mã thanh toán không hợp lệ.";
         }
 
-        ThanhToan thanhToan = thanhToanDao.findById(maThanhToan.trim());
+        ThanhToan thanhToan = thanhToanDao.findById(id);
         if (thanhToan == null) {
             return "Thanh toán không tồn tại.";
         }
 
-        if (thanhToan.getTrangThaiThanhToan() != TrangThaiThanhToan.THANH_CONG) {
+        if (!"Thành công".equalsIgnoreCase(thanhToan.getTrangThaiThanhToan())) {
             return "Chỉ thanh toán thành công mới có thể hoàn tiền.";
         }
 
@@ -185,16 +181,16 @@ public class ThanhToanService {
             return "Đơn hàng của thanh toán không tồn tại.";
         }
 
-        boolean updateThanhToan = thanhToanDao.updateTrangThai(maThanhToan.trim(), TrangThaiThanhToan.HOAN_TIEN);
+        boolean updateThanhToan = thanhToanDao.updateTrangThai(id, "Thất bại");
         if (!updateThanhToan) {
             return "Cập nhật trạng thái hoàn tiền thất bại.";
         }
 
-        donHangDao.updateTrangThai(donHang.getMaDonHang(), TrangThaiDonHang.DA_HUY);
+        donHangDao.updateTrangThai(donHang.getMaDonHang(), "Đã hủy");
 
         for (ChiTietDonHangVe chiTiet : chiTietDonHangVeDao.findByMaDonHang(donHang.getMaDonHang())) {
             if (chiTiet.getVe() != null) {
-                veDao.updateTrangThai(chiTiet.getVe().getMaVe(), TrangThaiVe.DA_HUY);
+                veDao.updateTrangThai(chiTiet.getVe().getMaVe(), "Đã hủy");
             }
         }
 
@@ -206,11 +202,11 @@ public class ThanhToanService {
             return "Dữ liệu thanh toán không hợp lệ.";
         }
 
-        if (isBlank(thanhToan.getMaThanhToan())) {
-            return "Mã thanh toán không được để trống.";
+        if (!isCreate && thanhToan.getMaThanhToan() == null) {
+            return "Mã thanh toán không được để trống khi cập nhật.";
         }
 
-        if (thanhToan.getDonHang() == null || isBlank(thanhToan.getDonHang().getMaDonHang())) {
+        if (thanhToan.getDonHang() == null || thanhToan.getDonHang().getMaDonHang() == null) {
             return "Đơn hàng của thanh toán không hợp lệ.";
         }
 
@@ -218,41 +214,38 @@ public class ThanhToanService {
             return "Phương thức thanh toán không được để trống.";
         }
 
-        if (thanhToan.getTrangThaiThanhToan() == null) {
-            thanhToan.setTrangThaiThanhToan(TrangThaiThanhToan.CHO_THANH_TOAN);
-        }
-
-        DonHang donHang = donHangDao.findById(thanhToan.getDonHang().getMaDonHang().trim());
+        DonHang donHang = donHangDao.findById(thanhToan.getDonHang().getMaDonHang());
         if (donHang == null) {
             return "Đơn hàng không tồn tại.";
         }
 
-        if (donHang.getTrangThaiDonHang() == TrangThaiDonHang.DA_HUY) {
+        if ("Đã hủy".equalsIgnoreCase(donHang.getTrangThaiDonHang())) {
             return "Không thể tạo thanh toán cho đơn hàng đã hủy.";
         }
 
-        if (donHang.getTrangThaiDonHang() == TrangThaiDonHang.DA_THANH_TOAN) {
+        if ("Đã thanh toán".equalsIgnoreCase(donHang.getTrangThaiDonHang())) {
             return "Đơn hàng này đã thanh toán.";
         }
 
-        thanhToan.setMaThanhToan(thanhToan.getMaThanhToan().trim());
         thanhToan.setPhuongThucThanhToan(thanhToan.getPhuongThucThanhToan().trim());
-        thanhToan.setMaGiaoDich(trimToNull(thanhToan.getMaGiaoDich()));
         thanhToan.setDonHang(donHang);
 
+        if (thanhToan.getThoiGianThanhToan() == null) {
+            thanhToan.setThoiGianThanhToan(LocalDateTime.now());
+        }
+
+        if (thanhToan.getTrangThaiThanhToan() == null || thanhToan.getTrangThaiThanhToan().trim().isEmpty()) {
+            thanhToan.setTrangThaiThanhToan("Thành công");
+        } else {
+            thanhToan.setTrangThaiThanhToan(normalizeThanhToanStatus(thanhToan.getTrangThaiThanhToan()));
+        }
+
         if (thanhToan.getSoTien() == null || thanhToan.getSoTien().compareTo(BigDecimal.ZERO) <= 0) {
-            BigDecimal tongTienDonHang = donHang.getTongTienSauGiam() == null
-                    ? BigDecimal.ZERO
-                    : donHang.getTongTienSauGiam();
-            thanhToan.setSoTien(tongTienDonHang);
+            thanhToan.setSoTien(tinhTongTienDonHang(donHang.getMaDonHang()));
         }
 
         if (thanhToan.getSoTien().compareTo(BigDecimal.ZERO) <= 0) {
             return "Số tiền thanh toán phải lớn hơn 0.";
-        }
-
-        if (isCreate && thanhToanDao.existsById(thanhToan.getMaThanhToan())) {
-            return "Mã thanh toán đã tồn tại.";
         }
 
         if (!isCreate && thanhToanDao.findById(thanhToan.getMaThanhToan()) == null) {
@@ -262,15 +255,40 @@ public class ThanhToanService {
         return null;
     }
 
-    private boolean isBlank(String value) {
-        return value == null || value.trim().isEmpty();
+    private BigDecimal tinhTongTienDonHang(Integer maDonHang) {
+        List<ChiTietDonHangVe> chiTietList = chiTietDonHangVeDao.findByMaDonHang(maDonHang);
+        BigDecimal tongTien = BigDecimal.ZERO;
+        for (ChiTietDonHangVe ct : chiTietList) {
+            if (ct.getDonGiaBan() != null) {
+                tongTien = tongTien.add(ct.getDonGiaBan());
+            }
+        }
+        return tongTien;
     }
 
-    private String trimToNull(String value) {
-        if (value == null) {
+    private Integer parseId(String value) {
+        if (isBlank(value)) {
             return null;
         }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private String normalizeThanhToanStatus(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        String value = raw.toString().trim();
+        if (value.equalsIgnoreCase("Thành công") || value.equalsIgnoreCase("THANH_CONG")) return "Thành công";
+        if (value.equalsIgnoreCase("Thất bại") || value.equalsIgnoreCase("THAT_BAI")) return "Thất bại";
+        if (value.equalsIgnoreCase("HOAN_TIEN")) return "Thất bại";
+        return value;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }

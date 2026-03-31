@@ -2,7 +2,6 @@ package org.example.cinema_finale.service;
 
 import org.example.cinema_finale.dao.PhimDao;
 import org.example.cinema_finale.entity.Phim;
-import org.example.cinema_finale.enums.TrangThaiPhim;
 import org.example.cinema_finale.util.AuthorizationUtil;
 
 import java.time.LocalDate;
@@ -29,21 +28,20 @@ public class PhimService {
     }
 
     public Phim getPhimById(String maPhim) {
-        if (isBlank(maPhim)) {
-            return null;
-        }
-        return phimDao.findById(maPhim.trim());
+        Integer id = parseId(maPhim);
+        return id == null ? null : phimDao.findById(id);
     }
 
     public List<Phim> searchByTenPhim(String tuKhoa) {
         return phimDao.findByTenPhim(tuKhoa == null ? "" : tuKhoa.trim());
     }
 
-    public List<Phim> getByTrangThai(TrangThaiPhim trangThaiPhim) {
-        if (trangThaiPhim == null) {
+    public List<Phim> getByTrangThai(Object trangThaiPhim) {
+        String status = normalizePhimStatus(trangThaiPhim);
+        if (status == null) {
             return List.of();
         }
-        return phimDao.findByTrangThai(trangThaiPhim);
+        return phimDao.findByTrangThai(status);
     }
 
     public String addPhim(Phim phim) {
@@ -70,10 +68,6 @@ public class PhimService {
         return result ? "Cập nhật phim thành công." : "Cập nhật phim thất bại.";
     }
 
-    /**
-     * Giữ tên hàm cũ để UI/controller cũ ít bị vỡ.
-     * Nhưng thực tế không xóa cứng, chỉ chuyển trạng thái NGUNG_CHIEU.
-     */
     public String deletePhim(String maPhim) {
         return stopPhim(maPhim);
     }
@@ -81,36 +75,39 @@ public class PhimService {
     public String stopPhim(String maPhim) {
         AuthorizationUtil.requireStaff();
 
-        if (isBlank(maPhim)) {
-            return "Mã phim không được để trống.";
+        Integer id = parseId(maPhim);
+        if (id == null) {
+            return "Mã phim không hợp lệ.";
         }
 
-        Phim phim = phimDao.findById(maPhim.trim());
+        Phim phim = phimDao.findById(id);
         if (phim == null) {
             return "Phim không tồn tại.";
         }
 
-        boolean result = phimDao.updateTrangThai(maPhim.trim(), TrangThaiPhim.NGUNG_CHIEU);
+        boolean result = phimDao.updateTrangThai(id, "Ngừng chiếu");
         return result ? "Ngừng chiếu phim thành công." : "Cập nhật trạng thái phim thất bại.";
     }
 
-    public String updateTrangThai(String maPhim, TrangThaiPhim trangThaiPhim) {
+    public String updateTrangThai(String maPhim, Object trangThaiPhim) {
         AuthorizationUtil.requireStaff();
 
-        if (isBlank(maPhim)) {
-            return "Mã phim không được để trống.";
+        Integer id = parseId(maPhim);
+        if (id == null) {
+            return "Mã phim không hợp lệ.";
         }
 
-        if (trangThaiPhim == null) {
+        String status = normalizePhimStatus(trangThaiPhim);
+        if (status == null) {
             return "Trạng thái phim không hợp lệ.";
         }
 
-        Phim phim = phimDao.findById(maPhim.trim());
+        Phim phim = phimDao.findById(id);
         if (phim == null) {
             return "Phim không tồn tại.";
         }
 
-        boolean result = phimDao.updateTrangThai(maPhim.trim(), trangThaiPhim);
+        boolean result = phimDao.updateTrangThai(id, status);
         return result ? "Cập nhật trạng thái phim thành công." : "Cập nhật trạng thái phim thất bại.";
     }
 
@@ -119,8 +116,8 @@ public class PhimService {
             return "Dữ liệu phim không hợp lệ.";
         }
 
-        if (isBlank(phim.getMaPhim())) {
-            return "Mã phim không được để trống.";
+        if (!isCreate && phim.getMaPhim() == null) {
+            return "Mã phim không được để trống khi cập nhật.";
         }
 
         if (isBlank(phim.getTenPhim())) {
@@ -139,25 +136,23 @@ public class PhimService {
             return "Thời lượng phim phải lớn hơn 0.";
         }
 
-        if (phim.getTrangThaiPhim() == null) {
-            return "Trạng thái phim không được để trống.";
+        if (phim.getGioiHanTuoi() != null && phim.getGioiHanTuoi() < 0) {
+            return "Giới hạn tuổi không hợp lệ.";
         }
 
-        if (phim.getNgayKhoiChieu() != null
-                && phim.getNgayKhoiChieu().isAfter(LocalDate.now().plusYears(2))) {
+        if (phim.getNgayKhoiChieu() != null && phim.getNgayKhoiChieu().isAfter(LocalDate.now().plusYears(2))) {
             return "Ngày khởi chiếu không hợp lệ.";
         }
 
-        phim.setMaPhim(phim.getMaPhim().trim());
         phim.setTenPhim(phim.getTenPhim().trim());
         phim.setTheLoai(phim.getTheLoai().trim());
         phim.setDaoDien(phim.getDaoDien().trim());
-        phim.setGioiHanTuoi(trimToNull(phim.getGioiHanTuoi()));
         phim.setDinhDang(trimToNull(phim.getDinhDang()));
-        phim.setMoTa(trimToNull(phim.getMoTa()));
 
-        if (isCreate && phimDao.existsById(phim.getMaPhim())) {
-            return "Mã phim đã tồn tại.";
+        if (phim.getTrangThaiPhim() == null || phim.getTrangThaiPhim().trim().isEmpty()) {
+            phim.setTrangThaiPhim("Sắp chiếu");
+        } else {
+            phim.setTrangThaiPhim(normalizePhimStatus(phim.getTrangThaiPhim()));
         }
 
         if (!isCreate && phimDao.findById(phim.getMaPhim()) == null) {
@@ -165,6 +160,29 @@ public class PhimService {
         }
 
         return null;
+    }
+
+    private Integer parseId(String value) {
+        if (isBlank(value)) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private String normalizePhimStatus(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        String value = raw.toString().trim();
+        if (value.equalsIgnoreCase("Sắp chiếu") || value.equalsIgnoreCase("SAP_CHIEU")) return "Sắp chiếu";
+        if (value.equalsIgnoreCase("Đang chiếu") || value.equalsIgnoreCase("DANG_CHIEU")) return "Đang chiếu";
+        if (value.equalsIgnoreCase("Ngừng chiếu") || value.equalsIgnoreCase("NGUNG_CHIEU")) return "Ngừng chiếu";
+        if (value.equalsIgnoreCase("Đã chiếu") || value.equalsIgnoreCase("DA_CHIEU")) return "Đã chiếu";
+        return value;
     }
 
     private boolean isBlank(String value) {

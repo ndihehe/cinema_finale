@@ -19,7 +19,7 @@ public final class AuthorizationUtil {
     }
 
     /**
-     * Yêu cầu tài khoản hiện tại phải có quyền STAFF.
+     * Yêu cầu tài khoản hiện tại phải có quyền nhân viên.
      */
     public static void requireStaff() {
         requireLogin();
