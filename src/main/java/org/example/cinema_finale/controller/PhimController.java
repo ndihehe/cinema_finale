@@ -1,24 +1,23 @@
 package org.example.cinema_finale.controller;
 
-import org.example.cinema_finale.dao.PhimDao;
 import org.example.cinema_finale.entity.Phim;
 import org.example.cinema_finale.enums.TrangThaiPhim;
+import org.example.cinema_finale.service.PhimService;
 import org.example.cinema_finale.view.PhimPanel;
 
 import javax.swing.*;
-import java.awt.*;
 import java.time.LocalDate;
-import java.util.List;
 import java.time.ZoneId;
+import java.util.List;
 
 public class PhimController {
 
-    private PhimPanel view;
-    private PhimDao dao;
+    private final PhimPanel view;
+    private final PhimService service;
 
     public PhimController(PhimPanel view) {
         this.view = view;
-        this.dao = new PhimDao();
+        this.service = new PhimService();
 
         init();
         loadTable();
@@ -26,170 +25,201 @@ public class PhimController {
 
     private void init() {
 
-        // ADD
+        // ===== ADD =====
         view.btnAdd.addActionListener(e -> {
-            Phim p = getForm();
+            Phim p = getForm(false);
             if (p == null) return;
 
-            if (dao.existsById(p.getMaPhim())) {
-                JOptionPane.showMessageDialog(view, "Mã đã tồn tại!");
-                return;
-            }
-
-            dao.save(p);
+            String message = service.addPhim(p);
+            JOptionPane.showMessageDialog(view, message);
             loadTable();
         });
 
-        // DELETE = NGỪNG CHIẾU
+        // ===== UPDATE =====
+        view.btnUpdate.addActionListener(e -> {
+            Phim p = getForm(true);
+            if (p == null) return;
+
+            String message = service.updatePhim(p);
+            JOptionPane.showMessageDialog(view, message);
+            loadTable();
+        });
+
+        // ===== DELETE (NGỪNG CHIẾU) =====
         view.btnDelete.addActionListener(e -> {
             int row = view.table.getSelectedRow();
             if (row >= 0) {
                 Phim p = view.tableModel.getPhimAt(row);
 
-                int confirm = JOptionPane.showConfirmDialog(view,
+                int confirm = JOptionPane.showConfirmDialog(
+                        view,
                         "Ngừng chiếu phim này?",
                         "Xác nhận",
-                        JOptionPane.YES_NO_OPTION);
+                        JOptionPane.YES_NO_OPTION
+                );
 
                 if (confirm == JOptionPane.YES_OPTION) {
-                    dao.delete(p.getMaPhim());
+                    String message = service.deletePhim(
+                            String.valueOf(p.getMaPhim()) // ✅ fix
+                    );
+                    JOptionPane.showMessageDialog(view, message);
                     loadTable();
                 }
             }
         });
 
-        // UPDATE
-        view.btnUpdate.addActionListener(e -> {
-            Phim p = getForm();
-            if (p == null) return;
-
-            dao.update(p);
-            loadTable();
-        });
-
-        // CLICK TABLE
+        // ===== CLICK TABLE =====
         view.table.getSelectionModel().addListSelectionListener(e -> {
             int row = view.table.getSelectedRow();
             if (row >= 0) {
                 Phim p = view.tableModel.getPhimAt(row);
 
-                view.txtMa.setText(p.getMaPhim());
+                view.txtMa.setText(String.valueOf(p.getMaPhim()));
                 view.txtTen.setText(p.getTenPhim());
                 view.txtTheLoai.setText(p.getTheLoai());
                 view.txtDaoDien.setText(p.getDaoDien());
-                view.txtThoiLuong.setText(p.getThoiLuong().toString());
-                view.cboGioiHanTuoi.setSelectedItem(p.getGioiHanTuoi());
+                view.txtThoiLuong.setText(String.valueOf(p.getThoiLuong()));
+
+                view.cboGioiHanTuoi.setSelectedItem(
+                        mapDoTuoi(p.getGioiHanTuoi())
+                );
+
                 view.cboDinhDang.setSelectedItem(p.getDinhDang());
 
-                view.dateChooser.setDate(
-                        java.sql.Date.valueOf(p.getNgayKhoiChieu())
+                if (p.getNgayKhoiChieu() != null) {
+                    view.dateChooser.setDate(
+                            java.sql.Date.valueOf(p.getNgayKhoiChieu())
+                    );
+                }
+
+                view.cboTrangThai.setSelectedItem(
+                        mapTrangThaiToEnum(p.getTrangThaiPhim())
                 );
-                view.cboTrangThai.setSelectedItem(p.getTrangThaiPhim());
 
                 view.txtMa.setEnabled(false);
             }
         });
 
-        // SEARCH
+        // ===== SEARCH =====
         view.btnSearch.addActionListener(e -> {
             String key = view.txtSearch.getText();
-            List<Phim> list = dao.findByTenPhim(key);
+            List<Phim> list = service.searchByTenPhim(key);
             view.tableModel.setData(list);
         });
     }
 
     private void loadTable() {
-        List<Phim> list = dao.findAll();
+        List<Phim> list = service.getAllPhim();
         view.tableModel.setData(list);
         view.txtMa.setEnabled(true);
     }
 
-    private Phim getForm() {
+    // ================= FORM =================
+    private Phim getForm(boolean isUpdate) {
 
-        String ma = view.txtMa.getText().trim();
+        String maStr = view.txtMa.getText().trim();
         String ten = view.txtTen.getText().trim();
         String theLoai = view.txtTheLoai.getText().trim();
         String daoDien = view.txtDaoDien.getText().trim();
         String thoiLuongStr = view.txtThoiLuong.getText().trim();
-        String gioiHanTuoi = (String) view.cboGioiHanTuoi.getSelectedItem();
-        String dinhDang = (String) view.cboDinhDang.getSelectedItem();
 
-        // ===== 1. RỖNG =====
-        if (ma.isEmpty() || ten.isEmpty() || theLoai.isEmpty()
+        if (ten.isEmpty() || theLoai.isEmpty()
                 || daoDien.isEmpty() || thoiLuongStr.isEmpty()) {
 
             JOptionPane.showMessageDialog(view, "Không được để trống!");
             return null;
         }
 
-        // ===== 2. MÃ PHIM =====
-        if (!ma.matches("^P\\d{3,}$")) {
-            JOptionPane.showMessageDialog(view, "Mã phim phải dạng Pxxx (vd: P001)");
-            return null;
-        }
-
-        // ===== 3. THỜI LƯỢNG =====
         int thoiLuong;
         try {
             thoiLuong = Integer.parseInt(thoiLuongStr);
-            if (thoiLuong <= 0 || thoiLuong > 500) {
-                JOptionPane.showMessageDialog(view, "Thời lượng phải từ 1 - 500 phút");
-                return null;
-            }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(view, "Thời lượng phải là số!");
             return null;
         }
 
-        //===== 7. NGAY CHIEU =====
-        if (view.dateChooser.getDate() == null) {
-            JOptionPane.showMessageDialog(view, "Chọn ngày chiếu!");
-            return null;
+        LocalDate ngayChieu = null;
+        if (view.dateChooser.getDate() != null) {
+            ngayChieu = view.dateChooser.getDate()
+                    .toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate();
         }
 
-        LocalDate ngayChieu = view.dateChooser.getDate()
-                .toInstant()
-                .atZone(ZoneId.systemDefault())
-                .toLocalDate();
-        TrangThaiPhim trangThai = (TrangThaiPhim) view.cboTrangThai.getSelectedItem();
+        // ===== TẠO ENTITY ĐÚNG =====
+        Phim p = new Phim();
 
-        // ===== 5. TÊN PHIM =====
-        if (ten.length() < 2) {
-            JOptionPane.showMessageDialog(view, "Tên phim quá ngắn!");
-            return null;
+        if (isUpdate) {
+            try {
+                p.setMaPhim(Integer.parseInt(maStr));
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(view, "Mã phim không hợp lệ!");
+                return null;
+            }
         }
 
-        // ===== 6. GIỚI HẠN TUỔI =====
-        if (!gioiHanTuoi.isEmpty() &&
-                !gioiHanTuoi.matches("P|K|T13|T16|T18")) {
-            JOptionPane.showMessageDialog(view,
-                    "Giới hạn tuổi: P, K, T13, T16, T18");
-            return null;
-        }
+        p.setTenPhim(ten);
+        p.setTheLoai(theLoai);
+        p.setDaoDien(daoDien);
+        p.setThoiLuong(thoiLuong);
+        p.setNgayKhoiChieu(ngayChieu);
 
-        // ===== 7. ĐỊNH DẠNG =====
-        if (!dinhDang.isEmpty() &&
-                !dinhDang.matches("2D|3D|IMAX")) {
-            JOptionPane.showMessageDialog(view,
-                    "Định dạng: 2D, 3D, IMAX");
-            return null;
-        }
+        // map độ tuổi
+        p.setGioiHanTuoi(mapTuoi(view.cboGioiHanTuoi.getSelectedItem()));
 
-        // ===== OK =====
-        return new Phim(
-                ma, ten, theLoai, daoDien,
-                thoiLuong, gioiHanTuoi, dinhDang,
-                ngayChieu,
-                "",
-                trangThai
+        p.setDinhDang((String) view.cboDinhDang.getSelectedItem());
+
+        // map trạng thái
+        p.setTrangThaiPhim(
+                mapEnumToTrangThai(view.cboTrangThai.getSelectedItem())
         );
-    }
-    //Highlight lỗi
-    private void markError(JTextField field) {
-        field.setBorder(BorderFactory.createLineBorder(Color.RED));
+
+        return p;
     }
 
-    private void clearError(JTextField field) {
-        field.setBorder(UIManager.getBorder("TextField.border"));
+    // ================= MAPPING =================
+
+    private Integer mapTuoi(Object value) {
+        if (value == null) return null;
+
+        return switch (value.toString()) {
+            case "P" -> 0;
+            case "K" -> 0;
+            case "T13" -> 13;
+            case "T16" -> 16;
+            case "T18" -> 18;
+            default -> null;
+        };
+    }
+
+    private String mapDoTuoi(Integer tuoi) {
+        if (tuoi == null) return "";
+
+        if (tuoi >= 18) return "T18";
+        if (tuoi >= 16) return "T16";
+        if (tuoi >= 13) return "T13";
+        return "P";
+    }
+
+    private String mapEnumToTrangThai(Object e) {
+        if (e == null) return "Sắp chiếu";
+
+        TrangThaiPhim t = (TrangThaiPhim) e;
+
+        return switch (t) {
+            case SAP_CHIEU -> "Sắp chiếu";
+            case DANG_CHIEU -> "Đang chiếu";
+            case NGUNG_CHIEU -> "Ngừng chiếu";
+        };
+    }
+
+    private TrangThaiPhim mapTrangThaiToEnum(String s) {
+        if (s == null) return TrangThaiPhim.SAP_CHIEU;
+
+        return switch (s) {
+            case "Đang chiếu" -> TrangThaiPhim.DANG_CHIEU;
+            case "Ngừng chiếu" -> TrangThaiPhim.NGUNG_CHIEU;
+            default -> TrangThaiPhim.SAP_CHIEU;
+        };
     }
 }

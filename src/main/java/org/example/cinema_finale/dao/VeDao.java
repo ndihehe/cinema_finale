@@ -5,7 +5,6 @@ import jakarta.persistence.EntityTransaction;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.NoResultException;
 import org.example.cinema_finale.entity.Ve;
-import org.example.cinema_finale.enums.TrangThaiVe;
 import org.example.cinema_finale.util.JpaUtil;
 
 import java.util.List;
@@ -19,8 +18,12 @@ public class VeDao {
                     "SELECT v FROM Ve v " +
                             "JOIN FETCH v.suatChieu sc " +
                             "JOIN FETCH sc.phim " +
+                            "JOIN FETCH sc.phongChieu " +
                             "JOIN FETCH v.loaiVe " +
-                            "ORDER BY sc.ngayGioChieu ASC, v.maGheNgoi ASC",
+                            "JOIN FETCH v.gheNgoi g " +
+                            "JOIN FETCH g.phongChieu " +
+                            "JOIN FETCH g.loaiGheNgoi " +
+                            "ORDER BY sc.ngayGioChieu ASC, g.hangGhe ASC, g.soGhe ASC",
                     Ve.class
             ).getResultList();
         } finally {
@@ -28,7 +31,7 @@ public class VeDao {
         }
     }
 
-    public Ve findById(String maVe) {
+    public Ve findById(Integer maVe) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return findById(em, maVe);
@@ -37,13 +40,17 @@ public class VeDao {
         }
     }
 
-    public Ve findById(EntityManager em, String maVe) {
+    public Ve findById(EntityManager em, Integer maVe) {
         try {
             return em.createQuery(
                             "SELECT v FROM Ve v " +
                                     "JOIN FETCH v.suatChieu sc " +
                                     "JOIN FETCH sc.phim " +
+                                    "JOIN FETCH sc.phongChieu " +
                                     "JOIN FETCH v.loaiVe " +
+                                    "JOIN FETCH v.gheNgoi g " +
+                                    "JOIN FETCH g.phongChieu " +
+                                    "JOIN FETCH g.loaiGheNgoi " +
                                     "WHERE v.maVe = :maVe",
                             Ve.class
                     ).setParameter("maVe", maVe)
@@ -53,16 +60,17 @@ public class VeDao {
         }
     }
 
-    /**
-     * Khóa bản ghi vé để chống double booking.
-     */
-    public Ve findByIdForUpdate(EntityManager em, String maVe) {
+    public Ve findByIdForUpdate(EntityManager em, Integer maVe) {
         try {
             return em.createQuery(
                             "SELECT v FROM Ve v " +
                                     "JOIN FETCH v.suatChieu sc " +
                                     "JOIN FETCH sc.phim " +
+                                    "JOIN FETCH sc.phongChieu " +
                                     "JOIN FETCH v.loaiVe " +
+                                    "JOIN FETCH v.gheNgoi g " +
+                                    "JOIN FETCH g.phongChieu " +
+                                    "JOIN FETCH g.loaiGheNgoi " +
                                     "WHERE v.maVe = :maVe",
                             Ve.class
                     ).setParameter("maVe", maVe)
@@ -73,16 +81,20 @@ public class VeDao {
         }
     }
 
-    public List<Ve> findByMaSuatChieu(String maSuatChieu) {
+    public List<Ve> findByMaSuatChieu(Integer maSuatChieu) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return em.createQuery(
                             "SELECT v FROM Ve v " +
                                     "JOIN FETCH v.suatChieu sc " +
                                     "JOIN FETCH sc.phim " +
+                                    "JOIN FETCH sc.phongChieu " +
                                     "JOIN FETCH v.loaiVe " +
+                                    "JOIN FETCH v.gheNgoi g " +
+                                    "JOIN FETCH g.phongChieu " +
+                                    "JOIN FETCH g.loaiGheNgoi " +
                                     "WHERE v.suatChieu.maSuatChieu = :maSuatChieu " +
-                                    "ORDER BY v.maGheNgoi ASC",
+                                    "ORDER BY g.hangGhe ASC, g.soGhe ASC",
                             Ve.class
                     ).setParameter("maSuatChieu", maSuatChieu)
                     .getResultList();
@@ -91,17 +103,21 @@ public class VeDao {
         }
     }
 
-    public List<Ve> findByMaSuatChieuAndTrangThai(String maSuatChieu, TrangThaiVe trangThaiVe) {
+    public List<Ve> findByMaSuatChieuAndTrangThai(Integer maSuatChieu, String trangThaiVe) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return em.createQuery(
                             "SELECT v FROM Ve v " +
                                     "JOIN FETCH v.suatChieu sc " +
                                     "JOIN FETCH sc.phim " +
+                                    "JOIN FETCH sc.phongChieu " +
                                     "JOIN FETCH v.loaiVe " +
+                                    "JOIN FETCH v.gheNgoi g " +
+                                    "JOIN FETCH g.phongChieu " +
+                                    "JOIN FETCH g.loaiGheNgoi " +
                                     "WHERE v.suatChieu.maSuatChieu = :maSuatChieu " +
                                     "AND v.trangThaiVe = :trangThaiVe " +
-                                    "ORDER BY v.maGheNgoi ASC",
+                                    "ORDER BY g.hangGhe ASC, g.soGhe ASC",
                             Ve.class
                     ).setParameter("maSuatChieu", maSuatChieu)
                     .setParameter("trangThaiVe", trangThaiVe)
@@ -111,7 +127,7 @@ public class VeDao {
         }
     }
 
-    public Ve findByMaSuatChieuAndMaGheNgoi(String maSuatChieu, String maGheNgoi) {
+    public Ve findByMaSuatChieuAndMaGheNgoi(Integer maSuatChieu, Integer maGheNgoi) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return findByMaSuatChieuAndMaGheNgoi(em, maSuatChieu, maGheNgoi);
@@ -120,15 +136,19 @@ public class VeDao {
         }
     }
 
-    public Ve findByMaSuatChieuAndMaGheNgoi(EntityManager em, String maSuatChieu, String maGheNgoi) {
+    public Ve findByMaSuatChieuAndMaGheNgoi(EntityManager em, Integer maSuatChieu, Integer maGheNgoi) {
         try {
             return em.createQuery(
                             "SELECT v FROM Ve v " +
                                     "JOIN FETCH v.suatChieu sc " +
                                     "JOIN FETCH sc.phim " +
+                                    "JOIN FETCH sc.phongChieu " +
                                     "JOIN FETCH v.loaiVe " +
+                                    "JOIN FETCH v.gheNgoi g " +
+                                    "JOIN FETCH g.phongChieu " +
+                                    "JOIN FETCH g.loaiGheNgoi " +
                                     "WHERE v.suatChieu.maSuatChieu = :maSuatChieu " +
-                                    "AND v.maGheNgoi = :maGheNgoi",
+                                    "AND v.gheNgoi.maGheNgoi = :maGheNgoi",
                             Ve.class
                     ).setParameter("maSuatChieu", maSuatChieu)
                     .setParameter("maGheNgoi", maGheNgoi)
@@ -138,8 +158,8 @@ public class VeDao {
         }
     }
 
-    public List<Ve> findAvailableByMaSuatChieu(String maSuatChieu) {
-        return findByMaSuatChieuAndTrangThai(maSuatChieu, TrangThaiVe.CHUA_BAN);
+    public List<Ve> findAvailableByMaSuatChieu(Integer maSuatChieu) {
+        return findByMaSuatChieuAndTrangThai(maSuatChieu, "Chưa bán");
     }
 
     public boolean save(Ve ve) {
@@ -184,11 +204,11 @@ public class VeDao {
         return em.merge(ve);
     }
 
-    public boolean delete(String maVe) {
-        return updateTrangThai(maVe, TrangThaiVe.DA_HUY);
+    public boolean delete(Integer maVe) {
+        return updateTrangThai(maVe, "Đã hủy");
     }
 
-    public boolean updateTrangThai(String maVe, TrangThaiVe trangThaiVe) {
+    public boolean updateTrangThai(Integer maVe, String trangThaiVe) {
         EntityManager em = JpaUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
         try {
@@ -205,7 +225,7 @@ public class VeDao {
         }
     }
 
-    public boolean updateTrangThai(EntityManager em, String maVe, TrangThaiVe trangThaiVe) {
+    public boolean updateTrangThai(EntityManager em, Integer maVe, String trangThaiVe) {
         Ve ve = findByIdForUpdate(em, maVe);
         if (ve == null) {
             return false;
@@ -215,11 +235,11 @@ public class VeDao {
         return true;
     }
 
-    public boolean existsById(String maVe) {
+    public boolean existsById(Integer maVe) {
         return findById(maVe) != null;
     }
 
-    public boolean existsBySuatChieuAndMaGheNgoi(String maSuatChieu, String maGheNgoi) {
+    public boolean existsBySuatChieuAndMaGheNgoi(Integer maSuatChieu, Integer maGheNgoi) {
         return findByMaSuatChieuAndMaGheNgoi(maSuatChieu, maGheNgoi) != null;
     }
 }

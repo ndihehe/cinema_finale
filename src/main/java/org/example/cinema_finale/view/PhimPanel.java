@@ -1,11 +1,10 @@
 package org.example.cinema_finale.view;
 
 import com.toedter.calendar.JDateChooser;
-import org.example.cinema_finale.TableModel.PhimTableModel;
+import org.example.cinema_finale.tablemodel.PhimTableModel;
 import org.example.cinema_finale.enums.TrangThaiPhim;
 
 import javax.swing.*;
-import javax.swing.border.TitledBorder;
 import java.awt.*;
 
 public class PhimPanel extends JPanel {

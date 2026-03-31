@@ -2,7 +2,6 @@ package org.example.cinema_finale.service;
 
 import org.example.cinema_finale.dao.TaiKhoanDao;
 import org.example.cinema_finale.entity.TaiKhoan;
-import org.example.cinema_finale.enums.TrangThaiTaiKhoan;
 import org.example.cinema_finale.util.AuthorizationUtil;
 
 import java.time.LocalDateTime;
@@ -29,10 +28,8 @@ public class TaiKhoanService {
     }
 
     public TaiKhoan getTaiKhoanById(String maTk) {
-        if (isBlank(maTk)) {
-            return null;
-        }
-        return taiKhoanDao.findById(maTk.trim());
+        Integer id = parseId(maTk);
+        return id == null ? null : taiKhoanDao.findById(id);
     }
 
     public TaiKhoan getByTenDangNhap(String tenDangNhap) {
@@ -66,39 +63,36 @@ public class TaiKhoanService {
         return result ? "Cập nhật tài khoản thành công." : "Cập nhật tài khoản thất bại.";
     }
 
-    public String updateTrangThai(String maTk, TrangThaiTaiKhoan trangThaiTaiKhoan) {
+    public String updateTrangThai(String maTk, Object trangThaiTaiKhoan) {
         AuthorizationUtil.requireStaff();
 
-        if (isBlank(maTk)) {
-            return "Mã tài khoản không được để trống.";
+        Integer id = parseId(maTk);
+        if (id == null) {
+            return "Mã tài khoản không hợp lệ.";
         }
 
-        if (trangThaiTaiKhoan == null) {
+        String status = normalizeTaiKhoanStatus(trangThaiTaiKhoan);
+        if (status == null) {
             return "Trạng thái tài khoản không hợp lệ.";
         }
 
-        TaiKhoan taiKhoan = taiKhoanDao.findById(maTk.trim());
+        TaiKhoan taiKhoan = taiKhoanDao.findById(id);
         if (taiKhoan == null) {
             return "Tài khoản không tồn tại.";
         }
 
-        boolean result = taiKhoanDao.updateTrangThai(maTk.trim(), trangThaiTaiKhoan);
-        return result ? "Cập nhật trạng thái tài khoản thành công."
-                : "Cập nhật trạng thái tài khoản thất bại.";
+        boolean result = taiKhoanDao.updateTrangThai(id, status);
+        return result ? "Cập nhật trạng thái tài khoản thành công." : "Cập nhật trạng thái tài khoản thất bại.";
     }
 
     public String lockTaiKhoan(String maTk) {
-        return updateTrangThai(maTk, TrangThaiTaiKhoan.BI_KHOA);
+        return updateTrangThai(maTk, "Khóa");
     }
 
     public String deactivateTaiKhoan(String maTk) {
-        return updateTrangThai(maTk, TrangThaiTaiKhoan.NGUNG_SU_DUNG);
+        return updateTrangThai(maTk, "Khóa");
     }
 
-    /**
-     * Login lõi.
-     * Nếu dự án của bạn băm mật khẩu thì thay đoạn equals bằng check hash.
-     */
     public TaiKhoan authenticate(String tenDangNhap, String matKhau) {
         if (isBlank(tenDangNhap) || isBlank(matKhau)) {
             return null;
@@ -109,7 +103,7 @@ public class TaiKhoanService {
             return null;
         }
 
-        if (taiKhoan.getTrangThaiTaiKhoan() != TrangThaiTaiKhoan.HOAT_DONG) {
+        if (!"Hoạt động".equalsIgnoreCase(taiKhoan.getTrangThaiTaiKhoan())) {
             return null;
         }
 
@@ -117,23 +111,20 @@ public class TaiKhoanService {
             return null;
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        taiKhoan.setLanDangNhapCuoi(now);
-        taiKhoanDao.updateLastLogin(taiKhoan.getMaTk(), now);
-
         return taiKhoan;
     }
 
     public String changePassword(String maTk, String matKhauMoi) {
-        if (isBlank(maTk)) {
-            return "Mã tài khoản không được để trống.";
+        Integer id = parseId(maTk);
+        if (id == null) {
+            return "Mã tài khoản không hợp lệ.";
         }
 
         if (isBlank(matKhauMoi)) {
             return "Mật khẩu mới không được để trống.";
         }
 
-        TaiKhoan taiKhoan = taiKhoanDao.findById(maTk.trim());
+        TaiKhoan taiKhoan = taiKhoanDao.findById(id);
         if (taiKhoan == null) {
             return "Tài khoản không tồn tại.";
         }
@@ -148,8 +139,8 @@ public class TaiKhoanService {
             return "Dữ liệu tài khoản không hợp lệ.";
         }
 
-        if (isBlank(taiKhoan.getMaTk())) {
-            return "Mã tài khoản không được để trống.";
+        if (!isCreate && taiKhoan.getMaTaiKhoan() == null) {
+            return "Mã tài khoản không được để trống khi cập nhật.";
         }
 
         if (isBlank(taiKhoan.getTenDangNhap())) {
@@ -160,55 +151,95 @@ public class TaiKhoanService {
             return "Mật khẩu không được để trống.";
         }
 
-        if (taiKhoan.getTrangThaiTaiKhoan() == null) {
-            return "Trạng thái tài khoản không được để trống.";
-        }
-
-        taiKhoan.setMaTk(taiKhoan.getMaTk().trim());
-        taiKhoan.setTenDangNhap(taiKhoan.getTenDangNhap().trim());
-
-        boolean coNhanVien = taiKhoan.getNhanVien() != null
-                && !isBlank(taiKhoan.getNhanVien().getMaNv());
-
-        boolean coKhachHang = taiKhoan.getKhachHang() != null
-                && !isBlank(taiKhoan.getKhachHang().getMaKh());
+        boolean coNhanVien = taiKhoan.getNhanVien() != null && taiKhoan.getNhanVien().getMaNhanVien() != null;
+        boolean coKhachHang = taiKhoan.getKhachHang() != null && taiKhoan.getKhachHang().getMaKhachHang() != null;
 
         if (coNhanVien == coKhachHang) {
             return "Tài khoản phải gắn đúng một đối tượng: nhân viên hoặc khách hàng.";
         }
 
-        if (isCreate && taiKhoanDao.existsById(taiKhoan.getMaTk())) {
-            return "Mã tài khoản đã tồn tại.";
+        if (isBlank(taiKhoan.getLoaiTaiKhoan())) {
+            taiKhoan.setLoaiTaiKhoan(coNhanVien ? "NhanVien" : "KhachHang");
+        } else {
+            taiKhoan.setLoaiTaiKhoan(normalizeLoaiTaiKhoan(taiKhoan.getLoaiTaiKhoan()));
         }
 
-        if (!isCreate && taiKhoanDao.findById(taiKhoan.getMaTk()) == null) {
+        if (isBlank(taiKhoan.getTrangThaiTaiKhoan())) {
+            taiKhoan.setTrangThaiTaiKhoan("Hoạt động");
+        } else {
+            taiKhoan.setTrangThaiTaiKhoan(normalizeTaiKhoanStatus(taiKhoan.getTrangThaiTaiKhoan()));
+        }
+
+        if (isCreate && taiKhoan.getNgayTao() == null) {
+            taiKhoan.setNgayTao(LocalDateTime.now());
+        }
+
+        taiKhoan.setTenDangNhap(taiKhoan.getTenDangNhap().trim());
+
+        if (!isCreate && taiKhoanDao.findById(taiKhoan.getMaTaiKhoan()) == null) {
             return "Tài khoản không tồn tại để cập nhật.";
         }
 
         TaiKhoan trungTenDangNhap = taiKhoanDao.findByTenDangNhap(taiKhoan.getTenDangNhap());
-        if (trungTenDangNhap != null && !trungTenDangNhap.getMaTk().equals(taiKhoan.getMaTk())) {
-            return "Tên đăng nhập đã tồn tại.";
+        if (trungTenDangNhap != null) {
+            if (isCreate || !trungTenDangNhap.getMaTaiKhoan().equals(taiKhoan.getMaTaiKhoan())) {
+                return "Tên đăng nhập đã tồn tại.";
+            }
         }
 
         if (coNhanVien) {
-            String maNv = taiKhoan.getNhanVien().getMaNv().trim();
-            TaiKhoan tkNhanVien = taiKhoanDao.findByMaNhanVien(maNv);
-            if (tkNhanVien != null && !tkNhanVien.getMaTk().equals(taiKhoan.getMaTk())) {
-                return "Nhân viên này đã có tài khoản.";
+            Integer maNhanVien = taiKhoan.getNhanVien().getMaNhanVien();
+            TaiKhoan tkNhanVien = taiKhoanDao.findByMaNhanVien(maNhanVien);
+            if (tkNhanVien != null) {
+                if (isCreate || !tkNhanVien.getMaTaiKhoan().equals(taiKhoan.getMaTaiKhoan())) {
+                    return "Nhân viên này đã có tài khoản.";
+                }
             }
             taiKhoan.setKhachHang(null);
         }
 
         if (coKhachHang) {
-            String maKh = taiKhoan.getKhachHang().getMaKh().trim();
-            TaiKhoan tkKhachHang = taiKhoanDao.findByMaKhachHang(maKh);
-            if (tkKhachHang != null && !tkKhachHang.getMaTk().equals(taiKhoan.getMaTk())) {
-                return "Khách hàng này đã có tài khoản.";
+            Integer maKhachHang = taiKhoan.getKhachHang().getMaKhachHang();
+            TaiKhoan tkKhachHang = taiKhoanDao.findByMaKhachHang(maKhachHang);
+            if (tkKhachHang != null) {
+                if (isCreate || !tkKhachHang.getMaTaiKhoan().equals(taiKhoan.getMaTaiKhoan())) {
+                    return "Khách hàng này đã có tài khoản.";
+                }
             }
             taiKhoan.setNhanVien(null);
         }
 
         return null;
+    }
+
+    private Integer parseId(String value) {
+        if (isBlank(value)) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private String normalizeLoaiTaiKhoan(String value) {
+        if (value == null) {
+            return null;
+        }
+        if (value.equalsIgnoreCase("NhanVien") || value.equalsIgnoreCase("NHAN_VIEN")) return "NhanVien";
+        if (value.equalsIgnoreCase("KhachHang") || value.equalsIgnoreCase("KHACH_HANG")) return "KhachHang";
+        return value.trim();
+    }
+
+    private String normalizeTaiKhoanStatus(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        String value = raw.toString().trim();
+        if (value.equalsIgnoreCase("Hoạt động") || value.equalsIgnoreCase("HOAT_DONG")) return "Hoạt động";
+        if (value.equalsIgnoreCase("Khóa") || value.equalsIgnoreCase("BI_KHOA") || value.equalsIgnoreCase("NGUNG_SU_DUNG")) return "Khóa";
+        return value;
     }
 
     private boolean isBlank(String value) {

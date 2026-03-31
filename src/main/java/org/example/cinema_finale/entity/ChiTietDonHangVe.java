@@ -1,50 +1,41 @@
 package org.example.cinema_finale.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-
+import jakarta.persistence.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "chi_tiet_don_hang_ve")
+@Table(
+    name = "ChiTietDonHangVe",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "UK_ChiTietDonHangVe_MaVe", columnNames = {"MaVe"})
+    }
+)
 public class ChiTietDonHangVe {
 
     @Id
-    @Column(name = "ma_chi_tiet_ve", length = 20, nullable = false)
-    private String maChiTietVe;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "MaChiTietVe")
+    private Integer maChiTietVe;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ma_don_hang", nullable = false)
+    @JoinColumn(name = "MaDonHang", nullable = false)
     private DonHang donHang;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ma_ve", nullable = false, unique = true)
+    @JoinColumn(name = "MaVe", nullable = false, unique = true)
     private Ve ve;
 
-    @Column(name = "don_gia_ban", precision = 12, scale = 2, nullable = false)
+    @Column(name = "DonGiaBan", nullable = false, precision = 18, scale = 2)
     private BigDecimal donGiaBan;
 
     public ChiTietDonHangVe() {
     }
 
-    public ChiTietDonHangVe(String maChiTietVe, DonHang donHang, Ve ve, BigDecimal donGiaBan) {
-        this.maChiTietVe = maChiTietVe;
-        this.donHang = donHang;
-        this.ve = ve;
-        this.donGiaBan = donGiaBan;
-    }
-
-    public String getMaChiTietVe() {
+    public Integer getMaChiTietVe() {
         return maChiTietVe;
     }
 
-    public void setMaChiTietVe(String maChiTietVe) {
+    public void setMaChiTietVe(Integer maChiTietVe) {
         this.maChiTietVe = maChiTietVe;
     }
 
@@ -70,15 +61,5 @@ public class ChiTietDonHangVe {
 
     public void setDonGiaBan(BigDecimal donGiaBan) {
         this.donGiaBan = donGiaBan;
-    }
-
-    @Override
-    public String toString() {
-        return "ChiTietDonHangVe{" +
-                "maChiTietVe='" + maChiTietVe + '\'' +
-                ", maDonHang='" + (donHang != null ? donHang.getMaDonHang() : null) + '\'' +
-                ", maVe='" + (ve != null ? ve.getMaVe() : null) + '\'' +
-                ", donGiaBan=" + donGiaBan +
-                '}';
     }
 }

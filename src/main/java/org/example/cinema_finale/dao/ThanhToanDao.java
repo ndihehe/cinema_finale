@@ -4,7 +4,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
 import jakarta.persistence.NoResultException;
 import org.example.cinema_finale.entity.ThanhToan;
-import org.example.cinema_finale.enums.TrangThaiThanhToan;
 import org.example.cinema_finale.util.JpaUtil;
 
 import java.util.List;
@@ -16,8 +15,10 @@ public class ThanhToanDao {
         try {
             return em.createQuery(
                     "SELECT tt FROM ThanhToan tt " +
-                            "JOIN FETCH tt.donHang " +
-                            "LEFT JOIN FETCH tt.nhanVien " +
+                            "JOIN FETCH tt.donHang dh " +
+                            "LEFT JOIN FETCH dh.khachHang " +
+                            "JOIN FETCH dh.nhanVien " +
+                            "LEFT JOIN FETCH dh.khuyenMai " +
                             "ORDER BY tt.thoiGianThanhToan DESC, tt.maThanhToan DESC",
                     ThanhToan.class
             ).getResultList();
@@ -26,7 +27,7 @@ public class ThanhToanDao {
         }
     }
 
-    public ThanhToan findById(String maThanhToan) {
+    public ThanhToan findById(Integer maThanhToan) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return findById(em, maThanhToan);
@@ -35,12 +36,14 @@ public class ThanhToanDao {
         }
     }
 
-    public ThanhToan findById(EntityManager em, String maThanhToan) {
+    public ThanhToan findById(EntityManager em, Integer maThanhToan) {
         try {
             return em.createQuery(
                             "SELECT tt FROM ThanhToan tt " +
-                                    "JOIN FETCH tt.donHang " +
-                                    "LEFT JOIN FETCH tt.nhanVien " +
+                                    "JOIN FETCH tt.donHang dh " +
+                                    "LEFT JOIN FETCH dh.khachHang " +
+                                    "JOIN FETCH dh.nhanVien " +
+                                    "LEFT JOIN FETCH dh.khuyenMai " +
                                     "WHERE tt.maThanhToan = :maThanhToan",
                             ThanhToan.class
                     ).setParameter("maThanhToan", maThanhToan)
@@ -50,13 +53,15 @@ public class ThanhToanDao {
         }
     }
 
-    public List<ThanhToan> findByMaDonHang(String maDonHang) {
+    public List<ThanhToan> findByMaDonHang(Integer maDonHang) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return em.createQuery(
                             "SELECT tt FROM ThanhToan tt " +
-                                    "JOIN FETCH tt.donHang " +
-                                    "LEFT JOIN FETCH tt.nhanVien " +
+                                    "JOIN FETCH tt.donHang dh " +
+                                    "LEFT JOIN FETCH dh.khachHang " +
+                                    "JOIN FETCH dh.nhanVien " +
+                                    "LEFT JOIN FETCH dh.khuyenMai " +
                                     "WHERE tt.donHang.maDonHang = :maDonHang " +
                                     "ORDER BY tt.thoiGianThanhToan DESC, tt.maThanhToan DESC",
                             ThanhToan.class
@@ -67,13 +72,15 @@ public class ThanhToanDao {
         }
     }
 
-    public List<ThanhToan> findByTrangThai(TrangThaiThanhToan trangThaiThanhToan) {
+    public List<ThanhToan> findByTrangThai(String trangThaiThanhToan) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return em.createQuery(
                             "SELECT tt FROM ThanhToan tt " +
-                                    "JOIN FETCH tt.donHang " +
-                                    "LEFT JOIN FETCH tt.nhanVien " +
+                                    "JOIN FETCH tt.donHang dh " +
+                                    "LEFT JOIN FETCH dh.khachHang " +
+                                    "JOIN FETCH dh.nhanVien " +
+                                    "LEFT JOIN FETCH dh.khuyenMai " +
                                     "WHERE tt.trangThaiThanhToan = :trangThaiThanhToan " +
                                     "ORDER BY tt.thoiGianThanhToan DESC, tt.maThanhToan DESC",
                             ThanhToan.class
@@ -126,11 +133,11 @@ public class ThanhToanDao {
         return em.merge(thanhToan);
     }
 
-    public boolean delete(String maThanhToan) {
-        return updateTrangThai(maThanhToan, TrangThaiThanhToan.THAT_BAI);
+    public boolean delete(Integer maThanhToan) {
+        return updateTrangThai(maThanhToan, "Thất bại");
     }
 
-    public boolean updateTrangThai(String maThanhToan, TrangThaiThanhToan trangThaiThanhToan) {
+    public boolean updateTrangThai(Integer maThanhToan, String trangThaiThanhToan) {
         EntityManager em = JpaUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
         try {
@@ -147,7 +154,7 @@ public class ThanhToanDao {
         }
     }
 
-    public boolean updateTrangThai(EntityManager em, String maThanhToan, TrangThaiThanhToan trangThaiThanhToan) {
+    public boolean updateTrangThai(EntityManager em, Integer maThanhToan, String trangThaiThanhToan) {
         ThanhToan thanhToan = em.find(ThanhToan.class, maThanhToan);
         if (thanhToan == null) {
             return false;
@@ -157,7 +164,7 @@ public class ThanhToanDao {
         return true;
     }
 
-    public boolean existsById(String maThanhToan) {
+    public boolean existsById(Integer maThanhToan) {
         return findById(maThanhToan) != null;
     }
 }

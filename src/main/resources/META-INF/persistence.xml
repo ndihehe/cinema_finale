@@ -13,6 +13,18 @@
         <class>org.example.cinema_finale.entity.DonHang</class>
         <class>org.example.cinema_finale.entity.ChiTietDonHangVe</class>
         <class>org.example.cinema_finale.entity.ThanhToan</class>
+        <class>org.example.cinema_finale.entity.Ghe</class>
+        <class>org.example.cinema_finale.entity.PhongChieu</class>
+        <class>org.example.cinema_finale.entity.ChucVu</class>
+        <class>org.example.cinema_finale.entity.GheNgoi</class>
+        <class>org.example.cinema_finale.entity.KhuyenMai</class>
+        <class>org.example.cinema_finale.entity.LoaiGheNgoi</class>
+        <class>org.example.cinema_finale.entity.LoaiKhuyenMai</class>
+        <class>org.example.cinema_finale.entity.ChiTietDonHangSanPham</class>
+        <class>org.example.cinema_finale.entity.DanhMucSanPham</class>
+        <class>org.example.cinema_finale.entity.LoaiSanPham</class>
+        <class>org.example.cinema_finale.entity.SanPham</class>
+
 
         <properties>
             <property name="javax.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
