@@ -2,7 +2,7 @@ package org.example.cinema_finale.view;
 
 import org.example.cinema_finale.entity.GheNgoi;
 import org.example.cinema_finale.entity.PhongChieu;
-import org.example.cinema_finale.TableModel.GheTableModel;
+import org.example.cinema_finale.tablemodel.GheTableModel;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;

@@ -1,4 +1,4 @@
-package org.example.cinema_finale.TableModel;
+package org.example.cinema_finale.tablemodel;
 
 import org.example.cinema_finale.entity.GheNgoi;
 

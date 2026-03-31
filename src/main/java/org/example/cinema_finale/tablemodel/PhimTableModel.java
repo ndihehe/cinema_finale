@@ -1,4 +1,4 @@
-package org.example.cinema_finale.TableModel;
+package org.example.cinema_finale.tablemodel;
 
 import javax.swing.table.AbstractTableModel;
 import java.util.List;
