@@ -1,11 +1,13 @@
 package org.example.cinema_finale.view.frame;
 
+import org.example.cinema_finale.controller.PhimController;
 import org.example.cinema_finale.entity.TaiKhoan;
 import org.example.cinema_finale.util.AuthorizationUtil;
 import org.example.cinema_finale.util.SessionManager;
 import org.example.cinema_finale.view.panel.staff.StaffHomePanel;
 import org.example.cinema_finale.view.panel.staff.StaffStatusBar;
 import org.example.cinema_finale.view.panel.staff.StaffTopMenuPanel;
+import org.example.cinema_finale.view.PhimPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -50,9 +52,15 @@ public class StaffMainFrame extends JFrame {
         add(contentPanel, BorderLayout.CENTER);
         add(statusBar, BorderLayout.SOUTH);
 
+
         bindEvents();
         loadCurrentUserInfo();
         showScreen(StaffTopMenuPanel.HOME);
+
+
+        PhimPanel phimPanel = new PhimPanel();
+        new PhimController(phimPanel);
+        registerScreen("PHIM", phimPanel);
     }
 
     private void ensureStaffAccess() {

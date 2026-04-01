@@ -1,115 +1,124 @@
 package org.example.cinema_finale.view;
 
-import org.example.cinema_finale.entity.GheNgoi;
-import org.example.cinema_finale.entity.PhongChieu;
+import org.example.cinema_finale.dto.GheDTO;
 import org.example.cinema_finale.tablemodel.GheTableModel;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class GhePanel extends JPanel {
 
     public JTextField txtMa = new JTextField();
-    public JTextField txtTen = new JTextField();
-    public JTextField txtLoai = new JTextField();
+    public JTextField txtHangGhe = new JTextField();
+    public JTextField txtSoGhe = new JTextField();
 
-    public JComboBox<PhongChieu> cboPhong;
-    public JCheckBox chkTrangThai = new JCheckBox("Hoạt động");
+    public JComboBox<String> cboPhong = new JComboBox<>(new String[]{"Phòng 1"});
+    public JComboBox<String> cboLoaiGhe = new JComboBox<>(new String[]{"Ghế thường", "VIP"});
+    public JComboBox<String> cboTrangThai =
+            new JComboBox<>(new String[]{"Hoạt động", "Hỏng"});
 
     public JButton btnAdd = new JButton("Thêm");
     public JButton btnUpdate = new JButton("Sửa");
     public JButton btnDelete = new JButton("Xóa");
-    // ❌ ĐÃ XÓA btnGenerate
 
     public JTable table;
     public GheTableModel tableModel;
 
-    public GhePanel(List<PhongChieu> dsPhong) {
+    public JPanel seatMapPanel = new JPanel();
+    public Map<String, JButton> seatMap = new HashMap<>();
+
+    public GhePanel() {
 
         setLayout(new BorderLayout(10,10));
+        setBackground(new Color(40,40,40));
 
-        JPanel form = new JPanel(new GridBagLayout());
-        form.setBorder(BorderFactory.createTitledBorder("Ghế"));
+        // ===== FORM =====
+        JPanel form = new JPanel(new GridLayout(6,2,5,5));
+        form.setPreferredSize(new Dimension(250,300));
+        form.setBorder(BorderFactory.createTitledBorder("Thông tin ghế"));
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5,5,5,5);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-
-        cboPhong = new JComboBox<>(dsPhong.toArray(new PhongChieu[0]));
-
-        int y=0;
-        addField(form, gbc, y++, "Mã", txtMa);
-        addField(form, gbc, y++, "Tên", txtTen);
-        addField(form, gbc, y++, "Loại", txtLoai);
-        addField(form, gbc, y++, "Phòng", cboPhong);
-        addField(form, gbc, y++, "Trạng thái", chkTrangThai);
+        addField(form, "Mã", txtMa);
+        addField(form, "Hàng", txtHangGhe);
+        addField(form, "Số", txtSoGhe);
+        addField(form, "Phòng", cboPhong);
+        addField(form, "Loại", cboLoaiGhe);
+        addField(form, "Trạng thái", cboTrangThai);
 
         add(form, BorderLayout.WEST);
 
+        // ===== RIGHT =====
+        JPanel right = new JPanel(new BorderLayout());
+
+        // Seat map
+        seatMapPanel.setLayout(new GridLayout(0,10,5,5));
+        seatMapPanel.setBorder(BorderFactory.createTitledBorder("Sơ đồ ghế"));
+        right.add(seatMapPanel, BorderLayout.NORTH);
+
+        // Table
         tableModel = new GheTableModel();
         table = new JTable(tableModel);
+        table.setRowHeight(28);
 
-        table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer(){
-            @Override
-            public Component getTableCellRendererComponent(
-                    JTable t, Object v, boolean s, boolean f, int r, int c) {
+        table.setBackground(new Color(45,45,45));
+        table.setForeground(Color.WHITE);
 
-                Component comp = super.getTableCellRendererComponent(t, v, s, f, r, c);
+        right.add(new JScrollPane(table), BorderLayout.CENTER);
 
-                if (comp instanceof JComponent) {
-                    ((JComponent) comp).setOpaque(true);
-                }
+        add(right, BorderLayout.CENTER);
 
-                Object val = t.getValueAt(r, 4);
-                String status = val != null ? val.toString() : "";
-
-                if (s) {
-                    comp.setBackground(new Color(70,130,180));
-                } else {
-                    comp.setBackground(
-                            "Hỏng".equals(status) ? Color.RED : new Color(45,45,45)
-                    );
-                }
-
-                comp.setForeground(Color.WHITE);
-
-                return comp;
-            }
-        });
-
-        add(new JScrollPane(table), BorderLayout.CENTER);
-
+        // ===== BUTTON =====
         JPanel btn = new JPanel();
         btn.add(btnAdd);
         btn.add(btnUpdate);
         btn.add(btnDelete);
-        // ❌ KHÔNG CÒN btnGenerate
 
         add(btn, BorderLayout.SOUTH);
+
+        txtMa.setEditable(false);
     }
 
-    private void addField(JPanel p, GridBagConstraints g,int y,String l,JComponent f){
-        g.gridx=0; g.gridy=y; p.add(new JLabel(l),g);
-        g.gridx=1; p.add(f,g);
+    private void addField(JPanel panel, String label, JComponent field) {
+        JLabel lbl = new JLabel(label);
+        lbl.setForeground(Color.WHITE);
+        panel.add(lbl);
+        panel.add(field);
     }
 
-    public JPanel createSeatMap(List<GheNgoi> list){
-        JPanel p = new JPanel(new GridLayout(0,10,5,5));
+    // ===== SEAT MAP =====
+    public void renderSeatMap(List<GheDTO> list) {
+        seatMapPanel.removeAll();
+        seatMap.clear();
 
-        for(GheNgoi g:list){
-            String label = g.getHangGhe() + g.getSoGhe();
+        for (GheDTO g : list) {
+            String key = g.getViTriGhe();
 
-            JButton b = new JButton(label);
+            JButton btn = new JButton(key);
+            btn.setForeground(Color.WHITE);
 
-            boolean isActive = "Hoạt động".equals(g.getTrangThaiGhe());
+            boolean active = "Hoạt động".equals(g.getTrangThaiGhe());
 
-            b.setBackground(isActive ? Color.GREEN : Color.RED);
-            b.setForeground(Color.WHITE);
+            if (g.getTenLoaiGheNgoi().equalsIgnoreCase("VIP")) {
+                btn.setBackground(Color.ORANGE);
+            } else {
+                btn.setBackground(active ? Color.GREEN : Color.RED);
+            }
 
-            p.add(b);
+            seatMap.put(key, btn);
+            seatMapPanel.add(btn);
         }
-        return p;
+
+        seatMapPanel.revalidate();
+        seatMapPanel.repaint();
+    }
+
+    public void highlightSeat(String viTri) {
+        seatMap.values().forEach(b -> b.setBorder(null));
+
+        if (seatMap.containsKey(viTri)) {
+            seatMap.get(viTri).setBorder(BorderFactory.createLineBorder(Color.YELLOW, 3));
+        }
     }
 }

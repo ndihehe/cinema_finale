@@ -1,12 +1,13 @@
 package org.example.cinema_finale.tablemodel;
 
+import org.example.cinema_finale.dto.PhimDTO;
+
 import javax.swing.table.AbstractTableModel;
 import java.util.List;
-import org.example.cinema_finale.entity.Phim;
 
 public class PhimTableModel extends AbstractTableModel {
 
-    private List<Phim> list;
+    private List<PhimDTO> list;
 
     private final String[] columns = {
             "Mã", "Tên", "Thể loại", "Đạo diễn",
@@ -14,16 +15,16 @@ public class PhimTableModel extends AbstractTableModel {
             "Định dạng", "Ngày chiếu", "Trạng thái"
     };
 
-    public PhimTableModel(List<Phim> list) {
+    public PhimTableModel(List<PhimDTO> list) {
         this.list = list;
     }
 
-    public void setData(List<Phim> list) {
+    public void setData(List<PhimDTO> list) {
         this.list = list;
         fireTableDataChanged();
     }
 
-    public Phim getPhimAt(int row) {
+    public PhimDTO getAt(int row) {
         return list.get(row);
     }
 
@@ -38,13 +39,8 @@ public class PhimTableModel extends AbstractTableModel {
     }
 
     @Override
-    public String getColumnName(int col) {
-        return columns[col];
-    }
-
-    @Override
     public Object getValueAt(int row, int col) {
-        Phim p = list.get(row);
+        PhimDTO p = list.get(row);
 
         return switch (col) {
             case 0 -> p.getMaPhim();

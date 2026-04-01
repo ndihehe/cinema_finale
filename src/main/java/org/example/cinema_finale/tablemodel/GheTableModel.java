@@ -1,21 +1,25 @@
 package org.example.cinema_finale.tablemodel;
 
-import org.example.cinema_finale.entity.GheNgoi;
+import org.example.cinema_finale.dto.GheDTO;
 
 import javax.swing.table.AbstractTableModel;
 import java.util.List;
 
 public class GheTableModel extends AbstractTableModel {
 
-    private List<GheNgoi> list;
+    private List<GheDTO> list;
 
     private final String[] columns = {
-            "Mã", "Tên", "Loại", "Phòng", "Trạng thái"
+            "Mã", "Vị trí", "Loại", "Phòng", "Trạng thái"
     };
 
-    public void setData(List<GheNgoi> list) {
+    public void setData(List<GheDTO> list) {
         this.list = list;
         fireTableDataChanged();
+    }
+
+    public GheDTO getAt(int row){
+        return list.get(row);
     }
 
     @Override
@@ -29,40 +33,16 @@ public class GheTableModel extends AbstractTableModel {
     }
 
     @Override
-    public String getColumnName(int col) {
-        return columns[col];
-    }
-
-    @Override
     public Object getValueAt(int row, int col) {
-        GheNgoi g = list.get(row);
+        GheDTO g = list.get(row);
 
         switch (col) {
             case 0: return g.getMaGheNgoi();
-
-            case 1:
-                return (g.getHangGhe() != null ? g.getHangGhe() : "") +
-                        (g.getSoGhe() != null ? g.getSoGhe() : "");
-
-            case 2:
-                return g.getLoaiGheNgoi() != null
-                        ? g.getLoaiGheNgoi().getTenLoaiGheNgoi()
-                        : "";
-
-            case 3:
-                return g.getPhongChieu() != null
-                        ? g.getPhongChieu().toString()
-                        : "";
-
-            case 4:
-                return g.getTrangThaiGhe() != null
-                        ? g.getTrangThaiGhe()
-                        : "";
+            case 1: return g.getViTriGhe();
+            case 2: return g.getTenLoaiGheNgoi();
+            case 3: return g.getTenPhongChieu();
+            case 4: return g.getTrangThaiGhe();
         }
         return null;
-    }
-
-    public GheNgoi getAt(int row){
-        return list.get(row);
     }
 }

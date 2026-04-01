@@ -1,63 +1,98 @@
 package org.example.cinema_finale.controller;
 
-import org.example.cinema_finale.entity.GheNgoi;
-import org.example.cinema_finale.entity.PhongChieu;
+import org.example.cinema_finale.dto.GheDTO;
 import org.example.cinema_finale.service.GheService;
 import org.example.cinema_finale.view.GhePanel;
 
 import javax.swing.*;
+import java.util.List;
 
 public class GheController {
 
-    private final GhePanel view;
-    private final GheService service;
+    private GhePanel view;
+    private GheService service = new GheService();
 
     public GheController(GhePanel view) {
         this.view = view;
-        this.service = new GheService();
 
         init();
-        loadByPhong();
+        loadTable();
     }
 
     private void init() {
 
-        view.cboPhong.addActionListener(e -> loadByPhong());
-
+        // CLICK TABLE
         view.table.getSelectionModel().addListSelectionListener(e -> {
             int row = view.table.getSelectedRow();
             if (row >= 0) {
-                GheNgoi g = view.tableModel.getAt(row);
+                GheDTO g = view.tableModel.getAt(row);
 
                 view.txtMa.setText(String.valueOf(g.getMaGheNgoi()));
+                view.txtHangGhe.setText(g.getHangGhe());
+                view.txtSoGhe.setText(String.valueOf(g.getSoGhe()));
 
-                view.txtTen.setText(
-                        (g.getHangGhe() != null ? g.getHangGhe() : "") +
-                                (g.getSoGhe() != null ? g.getSoGhe() : "")
-                );
+                view.cboPhong.setSelectedItem(g.getTenPhongChieu());
+                view.cboLoaiGhe.setSelectedItem(g.getTenLoaiGheNgoi());
+                view.cboTrangThai.setSelectedItem(g.getTrangThaiGhe());
 
-                view.txtLoai.setText(
-                        g.getLoaiGheNgoi() != null
-                                ? g.getLoaiGheNgoi().getTenLoaiGheNgoi()
-                                : ""
-                );
+                view.highlightSeat(g.getViTriGhe());
+            }
+        });
 
-                view.chkTrangThai.setSelected(
-                        "Hoạt động".equals(g.getTrangThaiGhe())
-                );
+        // CLICK SEAT
+        view.seatMapPanel.addMouseListener(new java.awt.event.MouseAdapter() {});
 
-                view.cboPhong.setSelectedItem(g.getPhongChieu());
+        // BUTTON
+        view.btnAdd.addActionListener(e -> {
+            GheDTO dto = getForm();
+            if (dto == null) return;
+
+            service.add(dto);
+            loadTable();
+        });
+
+        view.btnUpdate.addActionListener(e -> {
+            GheDTO dto = getForm();
+            if (dto == null) return;
+
+            service.update(dto);
+            loadTable();
+        });
+
+        view.btnDelete.addActionListener(e -> {
+            int row = view.table.getSelectedRow();
+            if (row >= 0) {
+                GheDTO dto = view.tableModel.getAt(row);
+                service.delete(dto.getMaGheNgoi());
+                loadTable();
             }
         });
     }
 
-    private void loadByPhong() {
-        PhongChieu p = (PhongChieu) view.cboPhong.getSelectedItem();
+    private void loadTable() {
+        Integer maPhong = 1;
 
-        if (p != null) {
-            view.tableModel.setData(
-                    service.getByPhong(p.getMaPhongChieu())
+        List<GheDTO> list = service.getByPhong(maPhong);
+
+        view.tableModel.setData(list);
+        view.renderSeatMap(list);
+    }
+
+    private GheDTO getForm() {
+        try {
+            return new GheDTO(
+                    view.txtMa.getText().isEmpty() ? null : Integer.parseInt(view.txtMa.getText()),
+                    1,
+                    "Phòng 1",
+                    view.txtHangGhe.getText(),
+                    Integer.parseInt(view.txtSoGhe.getText()),
+                    1,
+                    view.cboLoaiGhe.getSelectedItem().toString(),
+                    view.cboTrangThai.getSelectedItem().toString()
             );
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(view, "Dữ liệu không hợp lệ!");
+            return null;
         }
     }
 }
