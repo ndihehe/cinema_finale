@@ -3,7 +3,7 @@ package org.example.cinema_finale.dto;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public class BanVeDto {
+public class BanVeDTO {
     private Integer maVe;
 
     private Integer maSuatChieu;
@@ -28,10 +28,10 @@ public class BanVeDto {
     private BigDecimal giaVe;
     private String trangThaiVe;
 
-    public BanVeDto() {
+    public BanVeDTO() {
     }
 
-    public BanVeDto(Integer maVe, Integer maSuatChieu, Integer maPhim, String tenPhim,
+    public BanVeDTO(Integer maVe, Integer maSuatChieu, Integer maPhim, String tenPhim,
                     Integer maPhongChieu, String tenPhongChieu, LocalDateTime ngayGioChieu,
                     Integer maGheNgoi, String hangGhe, Integer soGhe,
                     String tenLoaiGheNgoi, String trangThaiGhe,
