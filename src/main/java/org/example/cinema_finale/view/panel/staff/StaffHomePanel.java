@@ -23,7 +23,7 @@ public class StaffHomePanel extends JPanel {
         gbc.weighty = 1;
         gbc.anchor = GridBagConstraints.CENTER;
 
-        add(new ShadowTitleLabel("HỆ THỐNG QUẢN LÝ RẠP CHIẾU PHIM"), gbc);
+        add(new ShadowTitleLabel("CINEMA MANAGEMENT SYSTEM"), gbc);
     }
 
     @Override
@@ -54,7 +54,7 @@ public class StaffHomePanel extends JPanel {
 
         public ShadowTitleLabel(String text) {
             this.text = text;
-            setPreferredSize(new Dimension(1100, 100));
+            setPreferredSize(new Dimension(1200, 110));
             setOpaque(false);
         }
 
@@ -62,21 +62,47 @@ public class StaffHomePanel extends JPanel {
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
-            Font font = new Font("Segoe UI Black", Font.BOLD, 42);
+            Font font = pickFont(46f);
             g2.setFont(font);
 
             FontMetrics fm = g2.getFontMetrics();
             int x = (getWidth() - fm.stringWidth(text)) / 2;
             int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
 
-            g2.setColor(new Color(0, 0, 0, 150));
-            g2.drawString(text, x + 3, y + 3);
+            g2.setColor(new Color(0, 0, 0, 180));
+            g2.drawString(text, x + 4, y + 4);
 
-            g2.setColor(Color.WHITE);
+            GradientPaint silver = new GradientPaint(
+                    0, y - fm.getAscent(), new Color(245, 245, 245),
+                    0, y + fm.getDescent(), new Color(145, 145, 145)
+            );
+            g2.setPaint(silver);
             g2.drawString(text, x, y);
 
             g2.dispose();
+        }
+
+        private Font pickFont(float size) {
+            String[] candidates = {
+                    "Orbitron",
+                    "Eurostile",
+                    "BankGothic Md BT",
+                    "Agency FB",
+                    "Arial Black"
+            };
+
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            java.util.List<String> available =
+                    java.util.Arrays.asList(ge.getAvailableFontFamilyNames());
+
+            for (String name : candidates) {
+                if (available.contains(name)) {
+                    return new Font(name, Font.BOLD, (int) size);
+                }
+            }
+            return new Font("Arial Black", Font.BOLD, (int) size);
         }
     }
 }
