@@ -6,6 +6,12 @@ import org.example.cinema_finale.dao.ChiTietDonHangVeDao;
 import org.example.cinema_finale.dao.DonHangDao;
 import org.example.cinema_finale.dao.ThanhToanDao;
 import org.example.cinema_finale.dao.VeDao;
+import org.example.cinema_finale.dto.BanVeThanhToanFormDTO;
+import org.example.cinema_finale.dto.CapNhatVeDonHangDTO;
+import org.example.cinema_finale.dto.DonHangDTO;
+import org.example.cinema_finale.dto.DonHangTamFormDTO;
+import org.example.cinema_finale.dto.MuaVeNhanhFormDTO;
+import org.example.cinema_finale.dto.VeDTO;
 import org.example.cinema_finale.entity.ChiTietDonHangVe;
 import org.example.cinema_finale.entity.DonHang;
 import org.example.cinema_finale.entity.TaiKhoan;
@@ -22,16 +28,25 @@ import java.util.List;
 
 public class BanVeService {
 
+    private static final String ORDER_CHUA_THANH_TOAN = "Chưa thanh toán";
+    private static final String ORDER_DA_THANH_TOAN = "Đã thanh toán";
+    private static final String ORDER_DA_HUY = "Đã hủy";
+    private static final String VE_CHUA_BAN = "Chưa bán";
+    private static final String VE_DA_BAN = "Đã bán";
+    private static final String PAYMENT_THANH_CONG = "Thành công";
+
     private final DonHangDao donHangDao;
     private final ChiTietDonHangVeDao chiTietDonHangVeDao;
     private final VeDao veDao;
     private final ThanhToanDao thanhToanDao;
+    private final VeService veService;
 
     public BanVeService() {
         this.donHangDao = new DonHangDao();
         this.chiTietDonHangVeDao = new ChiTietDonHangVeDao();
         this.veDao = new VeDao();
         this.thanhToanDao = new ThanhToanDao();
+        this.veService = new VeService();
     }
 
     public BanVeService(
@@ -44,19 +59,82 @@ public class BanVeService {
         this.chiTietDonHangVeDao = chiTietDonHangVeDao;
         this.veDao = veDao;
         this.thanhToanDao = thanhToanDao;
+        this.veService = new VeService();
     }
 
-    public List<Ve> getVeBySuatChieu(String maSuatChieu) {
-        Integer id = parseId(maSuatChieu);
-        return id == null ? List.of() : veDao.findByMaSuatChieu(id);
+    /* =========================
+       READ -> DTO
+       ========================= */
+
+    public List<VeDTO> getVeBySuatChieu(String maSuatChieu) {
+        AuthorizationUtil.requireStaff();
+        return veService.getByMaSuatChieu(maSuatChieu);
     }
 
-    public List<Ve> getVeTrongBySuatChieu(String maSuatChieu) {
-        Integer id = parseId(maSuatChieu);
-        return id == null ? List.of() : veDao.findByMaSuatChieuAndTrangThai(id, "Chưa bán");
+    public List<VeDTO> getVeTrongBySuatChieu(String maSuatChieu) {
+        AuthorizationUtil.requireStaff();
+        return veService.getAvailableByMaSuatChieu(maSuatChieu);
     }
 
-    public String taoDonHangTam(String maDonHangIgnored, String maKhuyenMaiIgnored, String ghiChu) {
+    public DonHangDTO getDonHangById(String maDonHang) {
+        AuthorizationUtil.requireStaff();
+
+        Integer id = parseId(maDonHang);
+        if (id == null) {
+            return null;
+        }
+
+        DonHang donHang = donHangDao.findById(id);
+        return donHang == null ? null : toDonHangDTO(donHang);
+    }
+
+    public List<VeDTO> getDanhSachVeTrongDonHang(String maDonHang) {
+        AuthorizationUtil.requireStaff();
+
+        Integer donHangId = parseId(maDonHang);
+        if (donHangId == null) {
+            return List.of();
+        }
+
+        List<ChiTietDonHangVe> chiTietList = chiTietDonHangVeDao.findByMaDonHang(donHangId);
+        List<VeDTO> result = new ArrayList<>();
+
+        for (ChiTietDonHangVe ct : chiTietList) {
+            if (ct.getVe() != null && ct.getVe().getMaVe() != null) {
+                VeDTO dto = veService.getVeById(String.valueOf(ct.getVe().getMaVe()));
+                if (dto != null) {
+                    result.add(dto);
+                }
+            }
+        }
+        return result;
+    }
+
+    public BigDecimal tinhTongTienDonHang(String maDonHang) {
+        AuthorizationUtil.requireStaff();
+
+        Integer donHangId = parseId(maDonHang);
+        if (donHangId == null) {
+            return BigDecimal.ZERO;
+        }
+
+        List<ChiTietDonHangVe> chiTietList = chiTietDonHangVeDao.findByMaDonHang(donHangId);
+        BigDecimal tongTien = BigDecimal.ZERO;
+
+        for (ChiTietDonHangVe ct : chiTietList) {
+            if (ct.getDonGiaBan() != null) {
+                tongTien = tongTien.add(ct.getDonGiaBan());
+            }
+        }
+
+        return tongTien;
+    }
+
+    /* =========================
+       WRITE <- FORM DTO
+       ========================= */
+
+    public String taoDonHangTam(DonHangTamFormDTO dto) {
         AuthorizationUtil.requireStaff();
 
         EntityManager em = JpaUtil.getEntityManager();
@@ -67,17 +145,18 @@ public class BanVeService {
 
             TaiKhoan taiKhoan = SessionManager.getCurrentTaiKhoan();
             if (taiKhoan == null || taiKhoan.getNhanVien() == null) {
-                return "Không xác định được nhân viên hiện tại.";
+                return rollbackAndReturn(tx, "Không xác định được nhân viên hiện tại.");
             }
 
             DonHang donHang = new DonHang();
             donHang.setNhanVien(taiKhoan.getNhanVien());
-            donHang.setGhiChu(trimToNull(ghiChu));
+            donHang.setGhiChu(dto == null ? null : trimToNull(dto.getGhiChu()));
             donHang.setNgayLap(LocalDateTime.now());
-            donHang.setTrangThaiDonHang("Chưa thanh toán");
+            donHang.setTrangThaiDonHang(ORDER_CHUA_THANH_TOAN);
 
             donHangDao.save(em, donHang);
             tx.commit();
+
             return "Tạo đơn hàng tạm thành công. Mã đơn hàng: " + donHang.getMaDonHang();
         } catch (Exception e) {
             if (tx.isActive()) {
@@ -90,20 +169,13 @@ public class BanVeService {
         }
     }
 
-    public DonHang getDonHangById(String maDonHang) {
-        Integer id = parseId(maDonHang);
-        return id == null ? null : donHangDao.findById(id);
-    }
-
-    public String themVeVaoDonHang(String maDonHang, String maVe) {
+    public String themVeVaoDonHang(CapNhatVeDonHangDTO dto) {
         AuthorizationUtil.requireStaff();
 
-        Integer donHangId = parseId(maDonHang);
-        Integer veId = parseId(maVe);
-        if (donHangId == null) {
+        if (dto == null || dto.getMaDonHang() == null) {
             return "Mã đơn hàng không hợp lệ.";
         }
-        if (veId == null) {
+        if (dto.getMaVe() == null) {
             return "Mã vé không hợp lệ.";
         }
 
@@ -113,27 +185,27 @@ public class BanVeService {
         try {
             tx.begin();
 
-            DonHang donHang = donHangDao.findById(em, donHangId);
+            DonHang donHang = donHangDao.findById(em, dto.getMaDonHang());
             if (donHang == null) {
-                return "Đơn hàng không tồn tại.";
+                return rollbackAndReturn(tx, "Đơn hàng không tồn tại.");
             }
 
-            if (!"Chưa thanh toán".equalsIgnoreCase(donHang.getTrangThaiDonHang())) {
-                return "Chỉ được thêm vé vào đơn hàng chưa thanh toán.";
+            if (!ORDER_CHUA_THANH_TOAN.equalsIgnoreCase(donHang.getTrangThaiDonHang())) {
+                return rollbackAndReturn(tx, "Chỉ được thêm vé vào đơn hàng chưa thanh toán.");
             }
 
-            Ve ve = veDao.findByIdForUpdate(em, veId);
+            Ve ve = veDao.findByIdForUpdate(em, dto.getMaVe());
             if (ve == null) {
-                return "Vé không tồn tại.";
+                return rollbackAndReturn(tx, "Vé không tồn tại.");
             }
 
-            if (!"Chưa bán".equalsIgnoreCase(ve.getTrangThaiVe())) {
-                return "Vé không còn ở trạng thái chưa bán.";
+            if (!VE_CHUA_BAN.equalsIgnoreCase(ve.getTrangThaiVe())) {
+                return rollbackAndReturn(tx, "Vé không còn ở trạng thái chưa bán.");
             }
 
-            ChiTietDonHangVe existed = chiTietDonHangVeDao.findByMaVe(em, veId);
+            ChiTietDonHangVe existed = chiTietDonHangVeDao.findByMaVe(em, dto.getMaVe());
             if (existed != null) {
-                return "Vé đã thuộc một đơn hàng khác.";
+                return rollbackAndReturn(tx, "Vé đã thuộc một đơn hàng khác.");
             }
 
             ChiTietDonHangVe chiTiet = new ChiTietDonHangVe();
@@ -155,15 +227,13 @@ public class BanVeService {
         }
     }
 
-    public String boVeKhoiDonHang(String maDonHang, String maVe) {
+    public String boVeKhoiDonHang(CapNhatVeDonHangDTO dto) {
         AuthorizationUtil.requireStaff();
 
-        Integer donHangId = parseId(maDonHang);
-        Integer veId = parseId(maVe);
-        if (donHangId == null) {
+        if (dto == null || dto.getMaDonHang() == null) {
             return "Mã đơn hàng không hợp lệ.";
         }
-        if (veId == null) {
+        if (dto.getMaVe() == null) {
             return "Mã vé không hợp lệ.";
         }
 
@@ -173,21 +243,24 @@ public class BanVeService {
         try {
             tx.begin();
 
-            DonHang donHang = donHangDao.findById(em, donHangId);
+            DonHang donHang = donHangDao.findById(em, dto.getMaDonHang());
             if (donHang == null) {
-                return "Đơn hàng không tồn tại.";
+                return rollbackAndReturn(tx, "Đơn hàng không tồn tại.");
             }
 
-            if (!"Chưa thanh toán".equalsIgnoreCase(donHang.getTrangThaiDonHang())) {
-                return "Chỉ được bỏ vé khỏi đơn hàng chưa thanh toán.";
+            if (!ORDER_CHUA_THANH_TOAN.equalsIgnoreCase(donHang.getTrangThaiDonHang())) {
+                return rollbackAndReturn(tx, "Chỉ được bỏ vé khỏi đơn hàng chưa thanh toán.");
             }
 
-            ChiTietDonHangVe chiTiet = chiTietDonHangVeDao.findByMaDonHangAndMaVe(em, donHangId, veId);
+            ChiTietDonHangVe chiTiet = chiTietDonHangVeDao.findByMaDonHangAndMaVe(
+                    em, dto.getMaDonHang(), dto.getMaVe()
+            );
             if (chiTiet == null) {
-                return "Vé không nằm trong đơn hàng.";
+                return rollbackAndReturn(tx, "Vé không nằm trong đơn hàng.");
             }
 
             chiTietDonHangVeDao.delete(em, chiTiet);
+
             tx.commit();
             return "Bỏ vé khỏi đơn hàng thành công.";
         } catch (Exception e) {
@@ -199,41 +272,6 @@ public class BanVeService {
         } finally {
             em.close();
         }
-    }
-
-    public List<Ve> getDanhSachVeTrongDonHang(String maDonHang) {
-        Integer donHangId = parseId(maDonHang);
-        if (donHangId == null) {
-            return List.of();
-        }
-
-        List<ChiTietDonHangVe> chiTietList = chiTietDonHangVeDao.findByMaDonHang(donHangId);
-        List<Ve> result = new ArrayList<>();
-
-        for (ChiTietDonHangVe ct : chiTietList) {
-            if (ct.getVe() != null) {
-                result.add(ct.getVe());
-            }
-        }
-        return result;
-    }
-
-    public BigDecimal tinhTongTienDonHang(String maDonHang) {
-        Integer donHangId = parseId(maDonHang);
-        if (donHangId == null) {
-            return BigDecimal.ZERO;
-        }
-
-        List<ChiTietDonHangVe> chiTietList = chiTietDonHangVeDao.findByMaDonHang(donHangId);
-        BigDecimal tongTien = BigDecimal.ZERO;
-
-        for (ChiTietDonHangVe ct : chiTietList) {
-            if (ct.getDonGiaBan() != null) {
-                tongTien = tongTien.add(ct.getDonGiaBan());
-            }
-        }
-
-        return tongTien;
     }
 
     public String huyDonHangTam(String maDonHang) {
@@ -252,14 +290,14 @@ public class BanVeService {
 
             DonHang donHang = donHangDao.findDetailById(em, donHangId);
             if (donHang == null) {
-                return "Đơn hàng không tồn tại.";
+                return rollbackAndReturn(tx, "Đơn hàng không tồn tại.");
             }
 
-            if ("Đã thanh toán".equalsIgnoreCase(donHang.getTrangThaiDonHang())) {
-                return "Không thể hủy đơn hàng đã thanh toán.";
+            if (ORDER_DA_THANH_TOAN.equalsIgnoreCase(donHang.getTrangThaiDonHang())) {
+                return rollbackAndReturn(tx, "Không thể hủy đơn hàng đã thanh toán.");
             }
 
-            donHang.setTrangThaiDonHang("Đã hủy");
+            donHang.setTrangThaiDonHang(ORDER_DA_HUY);
             donHangDao.update(em, donHang);
 
             tx.commit();
@@ -275,20 +313,13 @@ public class BanVeService {
         }
     }
 
-    public String xacNhanThanhToan(
-            String maDonHang,
-            String maThanhToanIgnored,
-            String phuongThucThanhToan,
-            String ghiChuIgnored,
-            String maGiaoDichIgnored
-    ) {
+    public String xacNhanThanhToan(BanVeThanhToanFormDTO dto) {
         AuthorizationUtil.requireStaff();
 
-        Integer donHangId = parseId(maDonHang);
-        if (donHangId == null) {
+        if (dto == null || dto.getMaDonHang() == null) {
             return "Mã đơn hàng không hợp lệ.";
         }
-        if (isBlank(phuongThucThanhToan)) {
+        if (isBlank(dto.getPhuongThucThanhToan())) {
             return "Phương thức thanh toán không được để trống.";
         }
 
@@ -298,36 +329,38 @@ public class BanVeService {
         try {
             tx.begin();
 
-            DonHang donHang = donHangDao.findDetailById(em, donHangId);
+            DonHang donHang = donHangDao.findDetailById(em, dto.getMaDonHang());
             if (donHang == null) {
-                return "Đơn hàng không tồn tại.";
+                return rollbackAndReturn(tx, "Đơn hàng không tồn tại.");
             }
 
-            if ("Đã hủy".equalsIgnoreCase(donHang.getTrangThaiDonHang())) {
-                return "Không thể thanh toán đơn hàng đã hủy.";
+            if (ORDER_DA_HUY.equalsIgnoreCase(donHang.getTrangThaiDonHang())) {
+                return rollbackAndReturn(tx, "Không thể thanh toán đơn hàng đã hủy.");
             }
 
-            if ("Đã thanh toán".equalsIgnoreCase(donHang.getTrangThaiDonHang())) {
-                return "Đơn hàng đã được thanh toán.";
+            if (ORDER_DA_THANH_TOAN.equalsIgnoreCase(donHang.getTrangThaiDonHang())) {
+                return rollbackAndReturn(tx, "Đơn hàng đã được thanh toán.");
             }
 
-            List<ChiTietDonHangVe> chiTietVes = chiTietDonHangVeDao.findByMaDonHang(em, donHangId);
+            List<ChiTietDonHangVe> chiTietVes = chiTietDonHangVeDao.findByMaDonHang(em, dto.getMaDonHang());
             if (chiTietVes == null || chiTietVes.isEmpty()) {
-                return "Đơn hàng chưa có vé để thanh toán.";
+                return rollbackAndReturn(tx, "Đơn hàng chưa có vé để thanh toán.");
             }
 
             BigDecimal tongTien = BigDecimal.ZERO;
+
             for (ChiTietDonHangVe ct : chiTietVes) {
                 if (ct.getVe() == null) {
-                    return "Chi tiết đơn hàng có vé không hợp lệ.";
+                    return rollbackAndReturn(tx, "Chi tiết đơn hàng có vé không hợp lệ.");
                 }
 
                 Ve ve = veDao.findByIdForUpdate(em, ct.getVe().getMaVe());
                 if (ve == null) {
-                    return "Vé " + ct.getVe().getMaVe() + " không tồn tại.";
+                    return rollbackAndReturn(tx, "Vé " + ct.getVe().getMaVe() + " không tồn tại.");
                 }
-                if (!"Chưa bán".equalsIgnoreCase(ve.getTrangThaiVe())) {
-                    return "Vé " + ve.getMaVe() + " không còn ở trạng thái chưa bán.";
+
+                if (!VE_CHUA_BAN.equalsIgnoreCase(ve.getTrangThaiVe())) {
+                    return rollbackAndReturn(tx, "Vé " + ve.getMaVe() + " không còn ở trạng thái chưa bán.");
                 }
 
                 if (ct.getDonGiaBan() != null) {
@@ -338,17 +371,17 @@ public class BanVeService {
             ThanhToan thanhToan = new ThanhToan();
             thanhToan.setDonHang(donHang);
             thanhToan.setSoTien(tongTien);
-            thanhToan.setPhuongThucThanhToan(phuongThucThanhToan.trim());
+            thanhToan.setPhuongThucThanhToan(dto.getPhuongThucThanhToan().trim());
             thanhToan.setThoiGianThanhToan(LocalDateTime.now());
-            thanhToan.setTrangThaiThanhToan("Thành công");
+            thanhToan.setTrangThaiThanhToan(PAYMENT_THANH_CONG);
             thanhToanDao.save(em, thanhToan);
 
-            donHang.setTrangThaiDonHang("Đã thanh toán");
+            donHang.setTrangThaiDonHang(ORDER_DA_THANH_TOAN);
             donHangDao.update(em, donHang);
 
             for (ChiTietDonHangVe ct : chiTietVes) {
                 Ve ve = veDao.findByIdForUpdate(em, ct.getVe().getMaVe());
-                ve.setTrangThaiVe("Đã bán");
+                ve.setTrangThaiVe(VE_DA_BAN);
                 veDao.update(em, ve);
             }
 
@@ -365,21 +398,13 @@ public class BanVeService {
         }
     }
 
-    public String muaVeNhanhAnToan(
-            String maDonHangIgnored,
-            List<String> dsMaVe,
-            String maThanhToanIgnored,
-            String phuongThucThanhToan,
-            String maKhuyenMaiIgnored,
-            String ghiChu,
-            String maGiaoDichIgnored
-    ) {
+    public String muaVeNhanhAnToan(MuaVeNhanhFormDTO dto) {
         AuthorizationUtil.requireStaff();
 
-        if (dsMaVe == null || dsMaVe.isEmpty()) {
+        if (dto == null || dto.getDsMaVe() == null || dto.getDsMaVe().isEmpty()) {
             return "Danh sách vé không được để trống.";
         }
-        if (isBlank(phuongThucThanhToan)) {
+        if (isBlank(dto.getPhuongThucThanhToan())) {
             return "Phương thức thanh toán không được để trống.";
         }
 
@@ -391,35 +416,34 @@ public class BanVeService {
 
             TaiKhoan taiKhoan = SessionManager.getCurrentTaiKhoan();
             if (taiKhoan == null || taiKhoan.getNhanVien() == null) {
-                return "Không xác định được nhân viên hiện tại.";
+                return rollbackAndReturn(tx, "Không xác định được nhân viên hiện tại.");
             }
 
             DonHang donHang = new DonHang();
             donHang.setNhanVien(taiKhoan.getNhanVien());
-            donHang.setGhiChu(trimToNull(ghiChu));
+            donHang.setGhiChu(trimToNull(dto.getGhiChu()));
             donHang.setNgayLap(LocalDateTime.now());
-            donHang.setTrangThaiDonHang("Chưa thanh toán");
+            donHang.setTrangThaiDonHang(ORDER_CHUA_THANH_TOAN);
             donHangDao.save(em, donHang);
 
             BigDecimal tongTien = BigDecimal.ZERO;
 
-            for (String maVe : dsMaVe) {
-                Integer veId = parseId(maVe);
+            for (Integer veId : dto.getDsMaVe()) {
                 if (veId == null) {
-                    return "Danh sách vé có mã vé không hợp lệ.";
+                    return rollbackAndReturn(tx, "Danh sách vé có mã vé không hợp lệ.");
                 }
 
                 Ve ve = veDao.findByIdForUpdate(em, veId);
                 if (ve == null) {
-                    return "Vé " + maVe + " không tồn tại.";
+                    return rollbackAndReturn(tx, "Vé " + veId + " không tồn tại.");
                 }
 
-                if (!"Chưa bán".equalsIgnoreCase(ve.getTrangThaiVe())) {
-                    return "Vé " + maVe + " không còn ở trạng thái chưa bán.";
+                if (!VE_CHUA_BAN.equalsIgnoreCase(ve.getTrangThaiVe())) {
+                    return rollbackAndReturn(tx, "Vé " + veId + " không còn ở trạng thái chưa bán.");
                 }
 
                 if (chiTietDonHangVeDao.findByMaVe(em, veId) != null) {
-                    return "Vé " + maVe + " đã thuộc một đơn hàng khác.";
+                    return rollbackAndReturn(tx, "Vé " + veId + " đã thuộc một đơn hàng khác.");
                 }
 
                 ChiTietDonHangVe chiTiet = new ChiTietDonHangVe();
@@ -436,30 +460,31 @@ public class BanVeService {
             ThanhToan thanhToan = new ThanhToan();
             thanhToan.setDonHang(donHang);
             thanhToan.setSoTien(tongTien);
-            thanhToan.setPhuongThucThanhToan(phuongThucThanhToan.trim());
+            thanhToan.setPhuongThucThanhToan(dto.getPhuongThucThanhToan().trim());
             thanhToan.setThoiGianThanhToan(LocalDateTime.now());
-            thanhToan.setTrangThaiThanhToan("Thành công");
+            thanhToan.setTrangThaiThanhToan(PAYMENT_THANH_CONG);
             thanhToanDao.save(em, thanhToan);
 
-            donHang.setTrangThaiDonHang("Đã thanh toán");
+            donHang.setTrangThaiDonHang(ORDER_DA_THANH_TOAN);
             donHangDao.update(em, donHang);
 
-            for (String maVe : dsMaVe) {
-                Integer veId = parseId(maVe);
+            for (Integer veId : dto.getDsMaVe()) {
                 Ve ve = veDao.findByIdForUpdate(em, veId);
                 if (ve == null) {
-                    return "Vé " + maVe + " không tồn tại khi chốt thanh toán.";
-                }
-                if (!"Chưa bán".equalsIgnoreCase(ve.getTrangThaiVe())) {
-                    return "Vé " + maVe + " đã bị thay đổi trạng thái trong lúc thanh toán.";
+                    return rollbackAndReturn(tx, "Vé " + veId + " không tồn tại khi chốt thanh toán.");
                 }
 
-                ve.setTrangThaiVe("Đã bán");
+                if (!VE_CHUA_BAN.equalsIgnoreCase(ve.getTrangThaiVe())) {
+                    return rollbackAndReturn(tx, "Vé " + veId + " đã bị thay đổi trạng thái trong lúc thanh toán.");
+                }
+
+                ve.setTrangThaiVe(VE_DA_BAN);
                 veDao.update(em, ve);
             }
 
             tx.commit();
-            return "Bán vé thành công. Mã đơn hàng: " + donHang.getMaDonHang() + ", mã thanh toán: " + thanhToan.getMaThanhToan();
+            return "Bán vé thành công. Mã đơn hàng: " + donHang.getMaDonHang()
+                    + ", mã thanh toán: " + thanhToan.getMaThanhToan();
         } catch (Exception e) {
             if (tx.isActive()) {
                 tx.rollback();
@@ -471,81 +496,33 @@ public class BanVeService {
         }
     }
 
-    public String xacNhanThanhToanAnToan(String maThanhToan) {
-        AuthorizationUtil.requireStaff();
+    /* =========================
+       DTO MAPPING
+       ========================= */
 
-        Integer thanhToanId = parseId(maThanhToan);
-        if (thanhToanId == null) {
-            return "Mã thanh toán không hợp lệ.";
+    private DonHangDTO toDonHangDTO(DonHang donHang) {
+        DonHangDTO dto = new DonHangDTO();
+        dto.setMaDonHang(donHang.getMaDonHang());
+        dto.setNgayLap(donHang.getNgayLap());
+        dto.setTrangThaiDonHang(donHang.getTrangThaiDonHang());
+        dto.setGhiChu(donHang.getGhiChu());
+        dto.setTongTien(tinhTongTienDonHang(String.valueOf(donHang.getMaDonHang())));
+
+        List<ChiTietDonHangVe> chiTietList = chiTietDonHangVeDao.findByMaDonHang(donHang.getMaDonHang());
+        dto.setSoLuongVe(chiTietList == null ? 0 : chiTietList.size());
+
+        return dto;
+    }
+
+    /* =========================
+       HELPERS
+       ========================= */
+
+    private String rollbackAndReturn(EntityTransaction tx, String message) {
+        if (tx != null && tx.isActive()) {
+            tx.rollback();
         }
-
-        EntityManager em = JpaUtil.getEntityManager();
-        EntityTransaction tx = em.getTransaction();
-
-        try {
-            tx.begin();
-
-            ThanhToan thanhToan = thanhToanDao.findById(em, thanhToanId);
-            if (thanhToan == null) {
-                return "Thanh toán không tồn tại.";
-            }
-
-            DonHang donHang = donHangDao.findDetailById(em, thanhToan.getDonHang().getMaDonHang());
-            if (donHang == null) {
-                return "Đơn hàng của thanh toán không tồn tại.";
-            }
-
-            if ("Đã hủy".equalsIgnoreCase(donHang.getTrangThaiDonHang())) {
-                return "Không thể xác nhận thanh toán cho đơn hàng đã hủy.";
-            }
-
-            if ("Thành công".equalsIgnoreCase(thanhToan.getTrangThaiThanhToan())) {
-                return "Thanh toán này đã được xác nhận trước đó.";
-            }
-
-            List<ChiTietDonHangVe> chiTietVes = chiTietDonHangVeDao.findByMaDonHang(em, donHang.getMaDonHang());
-            if (chiTietVes.isEmpty()) {
-                return "Đơn hàng không có vé để xác nhận.";
-            }
-
-            for (ChiTietDonHangVe ct : chiTietVes) {
-                if (ct.getVe() == null) {
-                    return "Chi tiết đơn hàng có vé không hợp lệ.";
-                }
-
-                Ve ve = veDao.findByIdForUpdate(em, ct.getVe().getMaVe());
-                if (ve == null) {
-                    return "Vé " + ct.getVe().getMaVe() + " không tồn tại.";
-                }
-                if (!"Chưa bán".equalsIgnoreCase(ve.getTrangThaiVe())) {
-                    return "Vé " + ve.getMaVe() + " không còn ở trạng thái chưa bán.";
-                }
-            }
-
-            thanhToan.setTrangThaiThanhToan("Thành công");
-            thanhToan.setThoiGianThanhToan(LocalDateTime.now());
-            thanhToanDao.update(em, thanhToan);
-
-            donHang.setTrangThaiDonHang("Đã thanh toán");
-            donHangDao.update(em, donHang);
-
-            for (ChiTietDonHangVe ct : chiTietVes) {
-                Ve ve = veDao.findByIdForUpdate(em, ct.getVe().getMaVe());
-                ve.setTrangThaiVe("Đã bán");
-                veDao.update(em, ve);
-            }
-
-            tx.commit();
-            return "Xác nhận thanh toán thành công.";
-        } catch (Exception e) {
-            if (tx.isActive()) {
-                tx.rollback();
-            }
-            e.printStackTrace();
-            return "Xác nhận thanh toán thất bại do lỗi giao dịch.";
-        } finally {
-            em.close();
-        }
+        return message;
     }
 
     private Integer parseId(String value) {

@@ -1,11 +1,13 @@
 package org.example.cinema_finale.service;
 
 import org.example.cinema_finale.dao.LoaiVeDao;
+import org.example.cinema_finale.dto.LoaiVeDTO;
 import org.example.cinema_finale.entity.LoaiVe;
 import org.example.cinema_finale.util.AuthorizationUtil;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class LoaiVeService {
 
@@ -19,60 +21,81 @@ public class LoaiVeService {
         this.loaiVeDao = loaiVeDao;
     }
 
-    public List<LoaiVe> getAllLoaiVe() {
-        return loaiVeDao.findAll();
+    // ==========================================
+    // 1. MAPPER: Chuyển đổi giữa Entity và DTO
+    // ==========================================
+    private LoaiVeDTO toDTO(LoaiVe lv) {
+        if (lv == null) return null;
+        return new LoaiVeDTO(
+                lv.getMaLoaiVe(),
+                lv.getTenLoaiVe(),
+                lv.getMoTa(),
+                lv.getPhuThuGia()
+        );
     }
 
-    public LoaiVe getLoaiVeById(String maLoaiVe) {
+    private LoaiVe toEntity(LoaiVeDTO dto) {
+        if (dto == null) return null;
+        LoaiVe lv = new LoaiVe();
+        lv.setMaLoaiVe(dto.getMaLoaiVe());
+        lv.setTenLoaiVe(dto.getTenLoaiVe());
+        lv.setMoTa(dto.getMoTa());
+        lv.setPhuThuGia(dto.getPhuThuGia() != null ? dto.getPhuThuGia() : BigDecimal.ZERO);
+        return lv;
+    }
+
+    // ==========================================
+    // 2. PUBLIC API DÀNH CHO VIEW / CONTROLLER
+    // ==========================================
+    public List<LoaiVeDTO> getAllLoaiVe() {
+        return loaiVeDao.findAll().stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    public LoaiVeDTO getLoaiVeById(String maLoaiVe) {
         Integer id = parseId(maLoaiVe);
-        return id == null ? null : loaiVeDao.findById(id);
+        return id == null ? null : toDTO(loaiVeDao.findById(id));
     }
 
-    public List<LoaiVe> searchByTenLoaiVe(String tuKhoa) {
-        return loaiVeDao.findByTenLoaiVe(tuKhoa == null ? "" : tuKhoa.trim());
+    public List<LoaiVeDTO> searchByTenLoaiVe(String tuKhoa) {
+        String keyword = tuKhoa == null ? "" : tuKhoa.trim();
+        return loaiVeDao.findByTenLoaiVe(keyword).stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
-    public String addLoaiVe(LoaiVe loaiVe) {
+    public String addLoaiVe(LoaiVeDTO loaiVeDTO) {
         AuthorizationUtil.requireStaff();
+        LoaiVe entity = toEntity(loaiVeDTO);
 
-        String validation = validateLoaiVe(loaiVe, true);
-        if (validation != null) {
-            return validation;
-        }
+        String validation = validateLoaiVe(entity, true);
+        if (validation != null) return validation;
 
-        boolean result = loaiVeDao.save(loaiVe);
-        return result ? "Thêm loại vé thành công." : "Thêm loại vé thất bại.";
+        return loaiVeDao.save(entity) ? "Thêm loại vé thành công." : "Thêm loại vé thất bại do lỗi DB.";
     }
 
-    public String updateLoaiVe(LoaiVe loaiVe) {
+    public String updateLoaiVe(LoaiVeDTO loaiVeDTO) {
         AuthorizationUtil.requireStaff();
+        LoaiVe entity = toEntity(loaiVeDTO);
 
-        String validation = validateLoaiVe(loaiVe, false);
-        if (validation != null) {
-            return validation;
-        }
+        String validation = validateLoaiVe(entity, false);
+        if (validation != null) return validation;
 
-        boolean result = loaiVeDao.update(loaiVe);
-        return result ? "Cập nhật loại vé thành công." : "Cập nhật loại vé thất bại.";
+        return loaiVeDao.update(entity) ? "Cập nhật loại vé thành công." : "Cập nhật loại vé thất bại.";
     }
 
     public String deleteLoaiVe(String maLoaiVe) {
         AuthorizationUtil.requireStaff();
-
         Integer id = parseId(maLoaiVe);
-        if (id == null) {
-            return "Mã loại vé không hợp lệ.";
-        }
+        if (id == null) return "Mã loại vé không hợp lệ.";
 
-        LoaiVe loaiVe = loaiVeDao.findById(id);
-        if (loaiVe == null) {
-            return "Loại vé không tồn tại.";
-        }
-
-        boolean result = loaiVeDao.delete(id);
-        return result ? "Xóa loại vé thành công." : "Xóa loại vé thất bại.";
+        return loaiVeDao.delete(id) ? "Xóa loại vé thành công." : "Xóa loại vé thất bại (Có thể loại vé này đang được sử dụng cho các vé đã bán).";
     }
 
+    // ==========================================
+    // 3. LOGIC NGHIỆP VỤ NỘI BỘ (PRIVATE)
+    // ==========================================
     private String validateLoaiVe(LoaiVe loaiVe, boolean isCreate) {
         if (loaiVe == null) {
             return "Dữ liệu loại vé không hợp lệ.";
@@ -120,10 +143,9 @@ public class LoaiVeService {
     }
 
     private String trimToNull(String value) {
-        if (value == null) {
+        if (isBlank(value)) {
             return null;
         }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
+        return value.trim();
     }
 }
