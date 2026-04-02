@@ -3,15 +3,27 @@ package org.example.cinema_finale.service;
 import org.example.cinema_finale.dao.LoaiVeDao;
 import org.example.cinema_finale.dao.SuatChieuDao;
 import org.example.cinema_finale.dao.VeDao;
+import org.example.cinema_finale.dto.VeDTO;
+import org.example.cinema_finale.dto.VeFormDTO;
+import org.example.cinema_finale.entity.GheNgoi;
 import org.example.cinema_finale.entity.LoaiVe;
+import org.example.cinema_finale.entity.Phim;
+import org.example.cinema_finale.entity.PhongChieu;
 import org.example.cinema_finale.entity.SuatChieu;
 import org.example.cinema_finale.entity.Ve;
 import org.example.cinema_finale.util.AuthorizationUtil;
 
 import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class VeService {
+
+    private static final String STATUS_CHUA_BAN = "Chưa bán";
+    private static final String STATUS_DA_BAN = "Đã bán";
+    private static final String STATUS_DA_SU_DUNG = "Đã sử dụng";
+    private static final String STATUS_DA_HUY = "Đã hủy";
 
     private final VeDao veDao;
     private final SuatChieuDao suatChieuDao;
@@ -29,37 +41,78 @@ public class VeService {
         this.loaiVeDao = loaiVeDao;
     }
 
-    public List<Ve> getAllVe() {
-        return veDao.findAll();
+    /* =========================
+       READ -> DTO
+       ========================= */
+
+    public List<VeDTO> getAllVe() {
+        AuthorizationUtil.requireStaff();
+        return veDao.findAll().stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
-    public Ve getVeById(String maVe) {
+    public VeDTO getVeById(String maVe) {
+        AuthorizationUtil.requireStaff();
+
         Integer id = parseId(maVe);
-        return id == null ? null : veDao.findById(id);
+        if (id == null) {
+            return null;
+        }
+
+        Ve ve = veDao.findById(id);
+        return ve == null ? null : toDTO(ve);
     }
 
-    public List<Ve> getByMaSuatChieu(String maSuatChieu) {
+    public List<VeDTO> getByMaSuatChieu(String maSuatChieu) {
+        AuthorizationUtil.requireStaff();
+
         Integer id = parseId(maSuatChieu);
-        return id == null ? List.of() : veDao.findByMaSuatChieu(id);
+        if (id == null) {
+            return List.of();
+        }
+
+        return veDao.findByMaSuatChieu(id).stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
-    public List<Ve> getAvailableByMaSuatChieu(String maSuatChieu) {
+    public List<VeDTO> getAvailableByMaSuatChieu(String maSuatChieu) {
+        AuthorizationUtil.requireStaff();
+
         Integer id = parseId(maSuatChieu);
-        return id == null ? List.of() : veDao.findAvailableByMaSuatChieu(id);
+        if (id == null) {
+            return List.of();
+        }
+
+        return veDao.findAvailableByMaSuatChieu(id).stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
-    public List<Ve> getByMaSuatChieuAndTrangThai(String maSuatChieu, Object trangThaiVe) {
+    public List<VeDTO> getByMaSuatChieuAndTrangThai(String maSuatChieu, Object trangThaiVe) {
+        AuthorizationUtil.requireStaff();
+
         Integer id = parseId(maSuatChieu);
         String status = normalizeVeStatus(trangThaiVe);
+
         if (id == null || status == null) {
             return List.of();
         }
-        return veDao.findByMaSuatChieuAndTrangThai(id, status);
+
+        return veDao.findByMaSuatChieuAndTrangThai(id, status).stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
-    public String addVe(Ve ve) {
+    /* =========================
+       WRITE <- FORM DTO
+       ========================= */
+
+    public String addVe(VeFormDTO formDTO) {
         AuthorizationUtil.requireStaff();
 
+        Ve ve = buildEntityFromForm(formDTO, true);
         String validation = validateVe(ve, true);
         if (validation != null) {
             return validation;
@@ -69,9 +122,14 @@ public class VeService {
         return result ? "Thêm vé thành công." : "Thêm vé thất bại.";
     }
 
-    public String updateVe(Ve ve) {
+    public String updateVe(VeFormDTO formDTO) {
         AuthorizationUtil.requireStaff();
 
+        if (formDTO == null || formDTO.getMaVe() == null) {
+            return "Mã vé không hợp lệ.";
+        }
+
+        Ve ve = buildEntityFromForm(formDTO, false);
         String validation = validateVe(ve, false);
         if (validation != null) {
             return validation;
@@ -80,6 +138,10 @@ public class VeService {
         boolean result = veDao.update(ve);
         return result ? "Cập nhật vé thành công." : "Cập nhật vé thất bại.";
     }
+
+    /* =========================
+       STATUS ACTIONS
+       ========================= */
 
     public String cancelVe(String maVe) {
         AuthorizationUtil.requireStaff();
@@ -94,11 +156,25 @@ public class VeService {
             return "Vé không tồn tại.";
         }
 
-        boolean result = veDao.updateTrangThai(id, "Đã hủy");
+        if (STATUS_DA_HUY.equalsIgnoreCase(ve.getTrangThaiVe())) {
+            return "Vé này đã ở trạng thái hủy.";
+        }
+
+        if (STATUS_DA_SU_DUNG.equalsIgnoreCase(ve.getTrangThaiVe())) {
+            return "Không thể hủy vé đã sử dụng.";
+        }
+
+        if (STATUS_DA_BAN.equalsIgnoreCase(ve.getTrangThaiVe())) {
+            return "Vé đã bán không được hủy trực tiếp. Hãy xử lý qua luồng hoàn tiền hoặc hủy đơn.";
+        }
+
+        boolean result = veDao.updateTrangThai(id, STATUS_DA_HUY);
         return result ? "Hủy vé thành công." : "Hủy vé thất bại.";
     }
 
     public String markAsSold(String maVe) {
+        AuthorizationUtil.requireStaff();
+
         Integer id = parseId(maVe);
         if (id == null) {
             return "Mã vé không hợp lệ.";
@@ -109,11 +185,11 @@ public class VeService {
             return "Vé không tồn tại.";
         }
 
-        if (!"Chưa bán".equalsIgnoreCase(ve.getTrangThaiVe())) {
+        if (!STATUS_CHUA_BAN.equalsIgnoreCase(ve.getTrangThaiVe())) {
             return "Chỉ vé chưa bán mới có thể chuyển sang đã bán.";
         }
 
-        boolean result = veDao.updateTrangThai(id, "Đã bán");
+        boolean result = veDao.updateTrangThai(id, STATUS_DA_BAN);
         return result ? "Cập nhật trạng thái vé thành công." : "Cập nhật trạng thái vé thất bại.";
     }
 
@@ -130,11 +206,11 @@ public class VeService {
             return "Vé không tồn tại.";
         }
 
-        if (!"Đã bán".equalsIgnoreCase(ve.getTrangThaiVe())) {
+        if (!STATUS_DA_BAN.equalsIgnoreCase(ve.getTrangThaiVe())) {
             return "Chỉ vé đã bán mới có thể đánh dấu đã sử dụng.";
         }
 
-        boolean result = veDao.updateTrangThai(id, "Đã sử dụng");
+        boolean result = veDao.updateTrangThai(id, STATUS_DA_SU_DUNG);
         return result ? "Đánh dấu vé đã sử dụng thành công." : "Cập nhật trạng thái vé thất bại.";
     }
 
@@ -151,21 +227,46 @@ public class VeService {
             return "Vé không tồn tại.";
         }
 
-        if ("Đã sử dụng".equalsIgnoreCase(ve.getTrangThaiVe())) {
+        if (STATUS_DA_SU_DUNG.equalsIgnoreCase(ve.getTrangThaiVe())) {
             return "Vé đã sử dụng không thể chuyển về chưa bán.";
         }
 
-        boolean result = veDao.updateTrangThai(id, "Chưa bán");
+        if (STATUS_DA_BAN.equalsIgnoreCase(ve.getTrangThaiVe())) {
+            return "Vé đã bán không thể chuyển trực tiếp về chưa bán.";
+        }
+
+        if (!STATUS_DA_HUY.equalsIgnoreCase(ve.getTrangThaiVe())) {
+            return "Chỉ vé đã hủy mới có thể khôi phục về chưa bán.";
+        }
+
+        boolean result = veDao.updateTrangThai(id, STATUS_CHUA_BAN);
         return result ? "Khôi phục vé về trạng thái chưa bán thành công." : "Cập nhật trạng thái vé thất bại.";
     }
+
+    /* =========================
+       VALIDATION
+       ========================= */
 
     private String validateVe(Ve ve, boolean isCreate) {
         if (ve == null) {
             return "Dữ liệu vé không hợp lệ.";
         }
 
-        if (!isCreate && ve.getMaVe() == null) {
-            return "Mã vé không được để trống khi cập nhật.";
+        Ve existing = null;
+        if (!isCreate) {
+            if (ve.getMaVe() == null) {
+                return "Mã vé không được để trống khi cập nhật.";
+            }
+
+            existing = veDao.findById(ve.getMaVe());
+            if (existing == null) {
+                return "Vé không tồn tại để cập nhật.";
+            }
+
+            if (STATUS_DA_BAN.equalsIgnoreCase(existing.getTrangThaiVe())
+                    || STATUS_DA_SU_DUNG.equalsIgnoreCase(existing.getTrangThaiVe())) {
+                return "Không thể cập nhật vé đã bán hoặc đã sử dụng.";
+            }
         }
 
         if (ve.getSuatChieu() == null || ve.getSuatChieu().getMaSuatChieu() == null) {
@@ -195,23 +296,32 @@ public class VeService {
             return "Loại vé không tồn tại.";
         }
 
-        if (ve.getTrangThaiVe() == null || ve.getTrangThaiVe().trim().isEmpty()) {
-            ve.setTrangThaiVe("Chưa bán");
+        if (isBlank(ve.getTrangThaiVe())) {
+            if (isCreate) {
+                ve.setTrangThaiVe(STATUS_CHUA_BAN);
+            } else {
+                ve.setTrangThaiVe(existing.getTrangThaiVe());
+            }
         } else {
-            ve.setTrangThaiVe(normalizeVeStatus(ve.getTrangThaiVe()));
+            String normalizedStatus = normalizeVeStatus(ve.getTrangThaiVe());
+            if (normalizedStatus == null) {
+                return "Trạng thái vé không hợp lệ.";
+            }
+            ve.setTrangThaiVe(normalizedStatus);
         }
 
         ve.setSuatChieu(suatChieu);
         ve.setLoaiVe(loaiVe);
 
-        BigDecimal giaVeTinhToan = suatChieu.getGiaVeCoBan().add(loaiVe.getPhuThuGia());
-        ve.setGiaVe(giaVeTinhToan);
+        BigDecimal giaVeCoBan = suatChieu.getGiaVeCoBan() == null ? BigDecimal.ZERO : suatChieu.getGiaVeCoBan();
+        BigDecimal phuThuGia = loaiVe.getPhuThuGia() == null ? BigDecimal.ZERO : loaiVe.getPhuThuGia();
+        ve.setGiaVe(giaVeCoBan.add(phuThuGia));
 
-        if (!isCreate && veDao.findById(ve.getMaVe()) == null) {
-            return "Vé không tồn tại để cập nhật.";
-        }
+        Ve veTrungGhe = veDao.findByMaSuatChieuAndMaGheNgoi(
+                suatChieu.getMaSuatChieu(),
+                ve.getGheNgoi().getMaGheNgoi()
+        );
 
-        Ve veTrungGhe = veDao.findByMaSuatChieuAndMaGheNgoi(suatChieu.getMaSuatChieu(), ve.getGheNgoi().getMaGheNgoi());
         if (veTrungGhe != null) {
             if (isCreate || !veTrungGhe.getMaVe().equals(ve.getMaVe())) {
                 return "Ghế này trong suất chiếu đã có vé.";
@@ -220,6 +330,134 @@ public class VeService {
 
         return null;
     }
+
+    /* =========================
+       DTO MAPPING
+       ========================= */
+
+    private Ve buildEntityFromForm(VeFormDTO formDTO, boolean isCreate) {
+        if (formDTO == null) {
+            return null;
+        }
+
+        Ve ve;
+        if (isCreate) {
+            ve = new Ve();
+        } else {
+            ve = veDao.findById(formDTO.getMaVe());
+            if (ve == null) {
+                return null;
+            }
+        }
+
+        if (formDTO.getMaVe() != null) {
+            ve.setMaVe(formDTO.getMaVe());
+        }
+
+        if (formDTO.getMaSuatChieu() != null) {
+            SuatChieu suatChieu = new SuatChieu();
+            suatChieu.setMaSuatChieu(formDTO.getMaSuatChieu());
+            ve.setSuatChieu(suatChieu);
+        }
+
+        if (formDTO.getMaGheNgoi() != null) {
+            GheNgoi gheNgoi = new GheNgoi();
+            gheNgoi.setMaGheNgoi(formDTO.getMaGheNgoi());
+            ve.setGheNgoi(gheNgoi);
+        }
+
+        if (formDTO.getMaLoaiVe() != null) {
+            LoaiVe loaiVe = new LoaiVe();
+            loaiVe.setMaLoaiVe(formDTO.getMaLoaiVe());
+            ve.setLoaiVe(loaiVe);
+        }
+
+        ve.setTrangThaiVe(trimToNull(formDTO.getTrangThaiVe()));
+        return ve;
+    }
+
+    private VeDTO toDTO(Ve ve) {
+        VeDTO dto = new VeDTO();
+
+        dto.setMaVe(ve.getMaVe());
+        dto.setGiaVe(ve.getGiaVe());
+        dto.setTrangThaiVe(ve.getTrangThaiVe());
+
+        if (ve.getSuatChieu() != null) {
+            dto.setMaSuatChieu(ve.getSuatChieu().getMaSuatChieu());
+
+            SuatChieu suatChieu = ve.getSuatChieu();
+
+            if (suatChieu.getPhongChieu() != null) {
+                PhongChieu phongChieu = suatChieu.getPhongChieu();
+                dto.setTenPhongChieu(readString(
+                        tryGet(phongChieu, "getTenPhongChieu"),
+                        tryGet(phongChieu, "getTenPhong"),
+                        tryGet(phongChieu, "getMaPhongChieu")
+                ));
+            }
+
+            if (suatChieu.getPhim() != null) {
+                Phim phim = suatChieu.getPhim();
+                dto.setTenPhim(readString(
+                        tryGet(phim, "getTenPhim"),
+                        tryGet(phim, "getTieuDe"),
+                        tryGet(phim, "getMaPhim")
+                ));
+            }
+
+            if (suatChieu.getNgayGioChieu() != null) {
+                dto.setNgayGioChieu(
+                        suatChieu.getNgayGioChieu().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                );
+            }
+        }
+
+        if (ve.getGheNgoi() != null) {
+            dto.setMaGheNgoi(ve.getGheNgoi().getMaGheNgoi());
+            dto.setViTriGhe(readString(
+                    tryGet(ve.getGheNgoi(), "getSoGhe"),
+                    tryGet(ve.getGheNgoi(), "getTenGhe"),
+                    tryGet(ve.getGheNgoi(), "getViTriGhe"),
+                    tryGet(ve.getGheNgoi(), "getMaGheNgoi")
+            ));
+        }
+
+        if (ve.getLoaiVe() != null) {
+            dto.setMaLoaiVe(ve.getLoaiVe().getMaLoaiVe());
+            dto.setTenLoaiVe(readString(
+                    tryGet(ve.getLoaiVe(), "getTenLoaiVe"),
+                    tryGet(ve.getLoaiVe(), "getLoaiVe"),
+                    tryGet(ve.getLoaiVe(), "getMaLoaiVe")
+            ));
+        }
+
+        return dto;
+    }
+
+    private Object tryGet(Object target, String methodName) {
+        try {
+            return target.getClass().getMethod(methodName).invoke(target);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String readString(Object... candidates) {
+        for (Object candidate : candidates) {
+            if (candidate != null) {
+                String value = candidate.toString().trim();
+                if (!value.isEmpty()) {
+                    return value;
+                }
+            }
+        }
+        return null;
+    }
+
+    /* =========================
+       HELPERS
+       ========================= */
 
     private Integer parseId(String value) {
         if (isBlank(value)) {
@@ -236,12 +474,31 @@ public class VeService {
         if (raw == null) {
             return null;
         }
+
         String value = raw.toString().trim();
-        if (value.equalsIgnoreCase("Chưa bán") || value.equalsIgnoreCase("CHUA_BAN")) return "Chưa bán";
-        if (value.equalsIgnoreCase("Đã bán") || value.equalsIgnoreCase("DA_BAN")) return "Đã bán";
-        if (value.equalsIgnoreCase("Đã sử dụng") || value.equalsIgnoreCase("DA_SU_DUNG")) return "Đã sử dụng";
-        if (value.equalsIgnoreCase("Đã hủy") || value.equalsIgnoreCase("DA_HUY") || value.equalsIgnoreCase("HUY")) return "Đã hủy";
-        return value;
+
+        if (value.equalsIgnoreCase("Chưa bán") || value.equalsIgnoreCase("CHUA_BAN")) {
+            return STATUS_CHUA_BAN;
+        }
+        if (value.equalsIgnoreCase("Đã bán") || value.equalsIgnoreCase("DA_BAN")) {
+            return STATUS_DA_BAN;
+        }
+        if (value.equalsIgnoreCase("Đã sử dụng") || value.equalsIgnoreCase("DA_SU_DUNG")) {
+            return STATUS_DA_SU_DUNG;
+        }
+        if (value.equalsIgnoreCase("Đã hủy") || value.equalsIgnoreCase("DA_HUY") || value.equalsIgnoreCase("HUY")) {
+            return STATUS_DA_HUY;
+        }
+
+        return null;
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private boolean isBlank(String value) {
