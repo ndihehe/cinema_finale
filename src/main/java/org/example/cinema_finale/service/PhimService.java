@@ -1,8 +1,11 @@
 package org.example.cinema_finale.service;
 
 import org.example.cinema_finale.dao.PhimDao;
+import org.example.cinema_finale.dto.PhimDTO;
 import org.example.cinema_finale.entity.Phim;
 import org.example.cinema_finale.util.AuthorizationUtil;
+import org.example.cinema_finale.dto.PhimDTO;
+import java.util.ArrayList;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -43,6 +46,38 @@ public class PhimService {
         }
         return phimDao.findByTrangThai(status);
     }
+
+    // ===== ADD THIS BLOCK =====
+    public String add(PhimDTO dto) {
+        return addPhim(toEntity(dto));
+    }
+
+    public String update(PhimDTO dto) {
+        return updatePhim(toEntity(dto));
+    }
+
+    public String delete(String maPhim) {
+        return deletePhim(maPhim);
+    }
+
+    private Phim toEntity(PhimDTO dto) {
+        if (dto == null) {
+            return null;
+        }
+
+        Phim phim = new Phim();
+        phim.setMaPhim(dto.getMaPhim());
+        phim.setTenPhim(dto.getTenPhim());
+        phim.setTheLoai(dto.getTheLoai());
+        phim.setDaoDien(dto.getDaoDien());
+        phim.setThoiLuong(dto.getThoiLuong());
+        phim.setGioiHanTuoi(dto.getGioiHanTuoi());
+        phim.setDinhDang(dto.getDinhDang());
+        phim.setNgayKhoiChieu(dto.getNgayKhoiChieu());
+        phim.setTrangThaiPhim(dto.getTrangThaiPhim());
+        return phim;
+    }
+    // ===== END ADD BLOCK =====
 
     public String addPhim(Phim phim) {
         AuthorizationUtil.requireStaff();
