@@ -1,19 +1,28 @@
 package org.example.cinema_finale.controller;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.swing.JButton;
+import javax.swing.JOptionPane;
+
 import org.example.cinema_finale.dto.GheDTO;
 import org.example.cinema_finale.service.GheService;
 import org.example.cinema_finale.view.GhePanel;
-
-import javax.swing.*;
-import java.util.List;
 
 public class GheController {
 
     private GhePanel view;
     private GheService service = new GheService();
+    private Integer maPhong;
+    private final Map<String, Integer> loaiGheNameToId = new HashMap<>();
 
-    public GheController(GhePanel view) {
+    private boolean isEditMode = false; // 🔥 MODE
+
+    public GheController(GhePanel view, Integer maPhong) {
         this.view = view;
+        this.maPhong = maPhong;
 
         init();
         loadTable();
@@ -30,69 +39,156 @@ public class GheController {
                 view.txtMa.setText(String.valueOf(g.getMaGheNgoi()));
                 view.txtHangGhe.setText(g.getHangGhe());
                 view.txtSoGhe.setText(String.valueOf(g.getSoGhe()));
-
-                view.cboPhong.setSelectedItem(g.getTenPhongChieu());
-                view.cboLoaiGhe.setSelectedItem(g.getTenLoaiGheNgoi());
+                view.cboLoaiGhe.setSelectedItem(normalizeLoaiGheDisplay(g.getTenLoaiGheNgoi()));
                 view.cboTrangThai.setSelectedItem(g.getTrangThaiGhe());
 
-                view.highlightSeat(g.getViTriGhe());
+                isEditMode = true;
             }
         });
 
-        // CLICK SEAT
-        view.seatMapPanel.addMouseListener(new java.awt.event.MouseAdapter() {});
-
-        // BUTTON
+        // ADD
         view.btnAdd.addActionListener(e -> {
+
+            if (isEditMode) {
+                clearForm();
+                return;
+            }
+
             GheDTO dto = getForm();
             if (dto == null) return;
+
+            dto.setMaPhongChieu(maPhong);
 
             service.add(dto);
             loadTable();
+            clearForm();
         });
 
+        // UPDATE
         view.btnUpdate.addActionListener(e -> {
+
+            if (!isEditMode) {
+                JOptionPane.showMessageDialog(view, "Chọn ghế để sửa!");
+                return;
+            }
+
             GheDTO dto = getForm();
             if (dto == null) return;
+
+            dto.setMaPhongChieu(maPhong);
 
             service.update(dto);
             loadTable();
         });
 
+        // DELETE
         view.btnDelete.addActionListener(e -> {
+
+            if (!isEditMode) {
+                JOptionPane.showMessageDialog(view, "Chọn ghế để xóa!");
+                return;
+            }
+
             int row = view.table.getSelectedRow();
             if (row >= 0) {
                 GheDTO dto = view.tableModel.getAt(row);
                 service.delete(dto.getMaGheNgoi());
                 loadTable();
+                clearForm();
             }
         });
     }
 
     private void loadTable() {
-        Integer maPhong = 1;
-
         List<GheDTO> list = service.getByPhong(maPhong);
-
+        loaiGheNameToId.clear();
+        for (GheDTO gheDTO : list) {
+            if (gheDTO.getTenLoaiGheNgoi() != null && gheDTO.getMaLoaiGheNgoi() != null) {
+                loaiGheNameToId.put(normalizeLoaiGheDisplay(gheDTO.getTenLoaiGheNgoi()), gheDTO.getMaLoaiGheNgoi());
+            }
+        }
         view.tableModel.setData(list);
         view.renderSeatMap(list);
+        bindSeatMapClicks(list);
+    }
+
+    private void bindSeatMapClicks(List<GheDTO> list) {
+        for (int i = 0; i < list.size(); i++) {
+            GheDTO gheDTO = list.get(i);
+            JButton btn = view.seatMap.get(gheDTO.getViTriGhe());
+            if (btn == null) {
+                continue;
+            }
+
+            final int rowIndex = i;
+            for (java.awt.event.ActionListener listener : btn.getActionListeners()) {
+                btn.removeActionListener(listener);
+            }
+
+            btn.addActionListener(e -> {
+                view.table.setRowSelectionInterval(rowIndex, rowIndex);
+                view.table.scrollRectToVisible(view.table.getCellRect(rowIndex, 0, true));
+            });
+        }
     }
 
     private GheDTO getForm() {
         try {
             return new GheDTO(
                     view.txtMa.getText().isEmpty() ? null : Integer.parseInt(view.txtMa.getText()),
-                    1,
-                    "Phòng 1",
+                    maPhong,
+                    "",
                     view.txtHangGhe.getText(),
                     Integer.parseInt(view.txtSoGhe.getText()),
-                    1,
-                    view.cboLoaiGhe.getSelectedItem().toString(),
+                    getLoaiGheIdBySelection(),
+                    normalizeLoaiGheDisplay(view.cboLoaiGhe.getSelectedItem().toString()),
                     view.cboTrangThai.getSelectedItem().toString()
             );
         } catch (Exception e) {
             JOptionPane.showMessageDialog(view, "Dữ liệu không hợp lệ!");
             return null;
         }
+    }
+
+    private void clearForm() {
+        view.txtMa.setText("");
+        view.txtHangGhe.setText("");
+        view.txtSoGhe.setText("");
+        view.cboLoaiGhe.setSelectedIndex(0);
+        view.cboTrangThai.setSelectedIndex(0);
+
+        view.table.clearSelection();
+        isEditMode = false;
+    }
+
+    private Integer getLoaiGheIdBySelection() {
+        String loaiGheDisplay = normalizeLoaiGheDisplay(view.cboLoaiGhe.getSelectedItem().toString());
+
+        if (loaiGheNameToId.containsKey(loaiGheDisplay)) {
+            return loaiGheNameToId.get(loaiGheDisplay);
+        }
+
+        if ("Ghế VIP".equalsIgnoreCase(loaiGheDisplay)) {
+            return 2;
+        }
+        if ("Ghế đôi".equalsIgnoreCase(loaiGheDisplay)) {
+            return 3;
+        }
+        return 1;
+    }
+
+    private String normalizeLoaiGheDisplay(String raw) {
+        if (raw == null) {
+            return "Ghế thường";
+        }
+
+        String value = raw.trim();
+        if ("VIP".equalsIgnoreCase(value) || "Ghế VIP".equalsIgnoreCase(value)) {
+            return "Ghế VIP";
+        }
+        if ("Ghế đôi".equalsIgnoreCase(value)) {
+            return "Ghế đôi";
+        }
+        return "Ghế thường";
     }
 }

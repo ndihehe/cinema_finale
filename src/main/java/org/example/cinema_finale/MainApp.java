@@ -1,19 +1,14 @@
 package org.example.cinema_finale;
 
-import com.formdev.flatlaf.FlatDarkLaf;
-import org.example.cinema_finale.view.frame.LoginFrame;
+import javax.swing.SwingUtilities;
 
-import javax.swing.*;
+import org.example.cinema_finale.util.AppTheme;
+import org.example.cinema_finale.view.frame.LoginFrame;
 
 public class MainApp {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-
-            try {
-                FlatDarkLaf.setup(); // 🔥 DARK MODE
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            AppTheme.installGlobal();
             LoginFrame loginFrame = new LoginFrame();
 
             loginFrame.setVisible(true);

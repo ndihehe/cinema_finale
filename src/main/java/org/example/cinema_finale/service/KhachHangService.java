@@ -236,4 +236,22 @@ public class KhachHangService {
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
     }
+
+    public List<KhachHangDTO> search(String keyword) {
+        AuthorizationUtil.requireStaff();
+
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return getAllKhachHang();
+        }
+
+        String key = keyword.trim().toLowerCase();
+
+        return khachHangDao.findAll().stream()
+                .filter(k ->
+                        (k.getHoTen() != null && k.getHoTen().toLowerCase().contains(key)) ||
+                                (k.getSoDienThoai() != null && k.getSoDienThoai().contains(key))
+                )
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
 }

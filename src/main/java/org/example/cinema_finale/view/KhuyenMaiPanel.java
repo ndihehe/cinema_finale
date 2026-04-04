@@ -1,13 +1,14 @@
 package org.example.cinema_finale.view;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.util.ArrayList;
 
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -18,40 +19,39 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 
-import org.example.cinema_finale.tablemodel.PhimTableModel;
+import org.example.cinema_finale.entity.LoaiKhuyenMai;
+import org.example.cinema_finale.tablemodel.KhuyenMaiTableModel;
 import org.example.cinema_finale.util.AppTheme;
 
 import com.toedter.calendar.JDateChooser;
 
-public class PhimPanel extends JPanel {
+public class KhuyenMaiPanel extends JPanel {
 
     public JTextField txtMa = new JTextField();
     public JTextField txtTen = new JTextField();
-    public JTextField txtTheLoai = new JTextField();
-    public JTextField txtDaoDien = new JTextField();
-    public JTextField txtThoiLuong = new JTextField();
 
-    public JTextField txtGioiHanTuoi = new JTextField(); // DTO
-    public JTextField txtDinhDang = new JTextField();    // DTO
+    public JComboBox<LoaiKhuyenMai> cboLoai = new JComboBox<>();
+    public JComboBox<String> cboKieu = new JComboBox<>(new String[]{"%", "TIEN"});
 
-    public JDateChooser dateChooser = new JDateChooser();
+    public JTextField txtGiaTri = new JTextField();
+    public JTextField txtDonHangToiThieu = new JTextField();
+
+    public JDateChooser dateStart = new JDateChooser();
+    public JDateChooser dateEnd = new JDateChooser();
 
     public JComboBox<String> cboTrangThai =
-            new JComboBox<>(new String[]{
-                    "Sắp chiếu", "Đang chiếu", "Ngừng chiếu", "Đã chiếu"
-            });
+            new JComboBox<>(new String[]{"Hoạt động", "Ngừng"});
 
     public JTextField txtSearch = new JTextField(15);
 
-
     public JButton btnAdd = new JButton("Thêm");
     public JButton btnUpdate = new JButton("Sửa");
-    public JButton btnDelete = new JButton("Ngừng chiếu");
+    public JButton btnDelete = new JButton("Ngừng");
 
     public JTable table;
-    public PhimTableModel tableModel;
+    public KhuyenMaiTableModel tableModel;
 
-    public PhimPanel() {
+    public KhuyenMaiPanel() {
 
         setLayout(new BorderLayout(10,10));
 
@@ -62,7 +62,6 @@ public class PhimPanel extends JPanel {
 
         AppTheme.styleSearchField(txtSearch);
 
-
         top.add(lblSearch);
         top.add(txtSearch);
 
@@ -70,7 +69,8 @@ public class PhimPanel extends JPanel {
 
         // ===== FORM =====
         JPanel form = new JPanel(new GridBagLayout());
-        AppTheme.styleTitledPanel(form, "Thông tin phim");
+        AppTheme.styleTitledPanel(form, "Thông tin khuyến mãi");
+        form.setPreferredSize(new Dimension(300, 0));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5,5,5,5);
@@ -79,18 +79,18 @@ public class PhimPanel extends JPanel {
         int y = 0;
         addField(form, gbc, y++, "Mã", txtMa);
         addField(form, gbc, y++, "Tên", txtTen);
-        addField(form, gbc, y++, "Thể loại", txtTheLoai);
-        addField(form, gbc, y++, "Đạo diễn", txtDaoDien);
-        addField(form, gbc, y++, "Thời lượng", txtThoiLuong);
-        addField(form, gbc, y++, "Giới hạn tuổi", txtGioiHanTuoi);
-        addField(form, gbc, y++, "Định dạng", txtDinhDang);
-        addField(form, gbc, y++, "Ngày chiếu", dateChooser);
+        addField(form, gbc, y++, "Loại", cboLoai);
+        addField(form, gbc, y++, "Kiểu", cboKieu);
+        addField(form, gbc, y++, "Giá trị", txtGiaTri);
+        addField(form, gbc, y++, "ĐH tối thiểu", txtDonHangToiThieu);
+        addField(form, gbc, y++, "Bắt đầu", dateStart);
+        addField(form, gbc, y++, "Kết thúc", dateEnd);
         addField(form, gbc, y++, "Trạng thái", cboTrangThai);
 
         add(form, BorderLayout.WEST);
 
         // ===== TABLE =====
-        tableModel = new PhimTableModel(new ArrayList<>());
+        tableModel = new KhuyenMaiTableModel();
         table = new JTable(tableModel);
         AppTheme.styleTable(table);
 
@@ -98,6 +98,7 @@ public class PhimPanel extends JPanel {
 
         // ===== BUTTON =====
         JPanel btn = new JPanel();
+        btn.setLayout(new FlowLayout(FlowLayout.CENTER, 15, 10));
 
         AppTheme.styleSuccessButton(btnAdd);
         AppTheme.styleWarningButton(btnUpdate);
@@ -112,6 +113,25 @@ public class PhimPanel extends JPanel {
         // ===== STYLE =====
         setUIStyle();
 
+        // ===== COMBO RENDER =====
+        cboLoai.setRenderer((list, value, index, isSelected, cellHasFocus) -> {
+            JLabel lbl = new JLabel();
+
+            if (value != null) {
+                lbl.setText(value.getTenLoaiKhuyenMai());
+            }
+
+            lbl.setOpaque(true);
+            lbl.setBackground(isSelected ? new Color(60, 86, 122) : AppTheme.BG_INPUT);
+            lbl.setForeground(AppTheme.TEXT_PRIMARY);
+
+            return lbl;
+        });
+
+        // ===== DATE STYLE =====
+        dateStart.setBackground(AppTheme.BG_INPUT);
+        dateEnd.setBackground(AppTheme.BG_INPUT);
+
         txtMa.setEditable(false);
     }
 
@@ -120,6 +140,7 @@ public class PhimPanel extends JPanel {
 
         JLabel lbl = new JLabel(label);
         lbl.setForeground(AppTheme.TEXT_PRIMARY);
+        lbl.setFont(new Font("Segoe UI", Font.PLAIN, 14));
 
         gbc.gridx = 0;
         gbc.gridy = y;
@@ -135,9 +156,9 @@ public class PhimPanel extends JPanel {
         Dimension size = new Dimension(200, 28);
 
         for (Component c : new Component[]{
-                txtMa, txtTen, txtTheLoai, txtDaoDien,
-                txtThoiLuong, txtGioiHanTuoi, txtDinhDang,
-                dateChooser, cboTrangThai
+                txtMa, txtTen, txtGiaTri, txtDonHangToiThieu,
+                txtSearch, cboLoai, cboKieu, cboTrangThai,
+                dateStart, dateEnd
         }) {
             c.setFont(font);
             c.setPreferredSize(size);
@@ -146,6 +167,12 @@ public class PhimPanel extends JPanel {
                 c.setBackground(AppTheme.BG_INPUT);
                 c.setForeground(AppTheme.TEXT_PRIMARY);
             }
+
+            if (c instanceof JComboBox) {
+                c.setBackground(AppTheme.BG_INPUT);
+                c.setForeground(AppTheme.TEXT_PRIMARY);
+            }
         }
     }
+
 }
