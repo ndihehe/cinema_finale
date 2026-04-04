@@ -482,7 +482,7 @@ ORDER BY k.MaKhachHang
 LIMIT 500;
 
 -- 3) Phim lớn (120 records)
-INSERT INTO Phim (TenPhim, TheLoai, DaoDien, ThoiLuong, GioiHanTuoi, DinhDang, NgayKhoiChieu, TrangThaiPhim)
+INSERT INTO Phim (TenPhim, TheLoai, DaoDien, ThoiLuong, GioiHanTuoi, DinhDang, PosterUrl, NgayKhoiChieu, TrangThaiPhim)
 SELECT
     CONCAT('Phim bom tấn ', LPAD(seq.n, 3, '0')),
     ELT((seq.n % 6) + 1, 'Hành động', 'Tình cảm', 'Hài', 'Kinh dị', 'Hoạt hình', 'Khoa học viễn tưởng'),
@@ -490,6 +490,7 @@ SELECT
     90 + (seq.n % 70),
     ELT((seq.n % 4) + 1, 0, 13, 16, 18),
     ELT((seq.n % 3) + 1, '2D', '3D', 'IMAX'),
+    CONCAT('src/main/resources/images/poster_0', ((seq.n - 1) % 4) + 1, '.jpg'),
     DATE_ADD(CURDATE(), INTERVAL (seq.n - 60) DAY),
     CASE
         WHEN seq.n < 35 THEN 'Ngừng chiếu'
@@ -514,7 +515,20 @@ SELECT
     ((d.day_index + s.slot_index + pc.MaPhongChieu) % (SELECT MAX(MaPhim) FROM Phim)) + 1 AS MaPhim,
     pc.MaPhongChieu,
     TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL d.day_offset DAY), s.gio_chieu),
-    70000 + ((d.day_index * 7000 + s.slot_index * 5000 + pc.MaPhongChieu * 3000) % 70000),
+    (
+        70000
+        + ((pc.MaPhongChieu - 1) * 5000)
+        + CASE s.slot_index
+            WHEN 1 THEN 0
+            WHEN 2 THEN 5000
+            WHEN 3 THEN 10000
+            ELSE 18000
+          END
+        + CASE
+            WHEN DAYOFWEEK(DATE_ADD(CURDATE(), INTERVAL d.day_offset DAY)) IN (1, 7) THEN 15000
+            ELSE 0
+          END
+    ),
     CASE
         WHEN d.day_offset < 0 THEN 'Đã chiếu'
         WHEN d.day_offset = 0 THEN 'Đang chiếu'
@@ -595,20 +609,25 @@ CREATE TEMPORARY TABLE tmp_order_seed (
     TrangThaiDonHang VARCHAR(30) NOT NULL
 ) ENGINE=Memory;
 
+SET @tickets_per_order := 3;
+
 INSERT INTO tmp_order_seed (seed_idx, seed_code, MaKhachHang, MaNhanVien, MaKhuyenMai, NgayLap, TrangThaiDonHang)
 SELECT
-    t.rn,
-    CONCAT('BULK_ORDER_', LPAD(t.rn, 6, '0')),
-    ((t.rn - 1) % (SELECT MAX(MaKhachHang) FROM KhachHang)) + 1,
-    ((t.rn - 1) % (SELECT MAX(MaNhanVien) FROM NhanVien)) + 1,
-    CASE WHEN t.rn % 4 = 0 THEN ((t.rn - 1) % (SELECT MAX(MaKhuyenMai) FROM KhuyenMai)) + 1 ELSE NULL END,
-    DATE_SUB(NOW(), INTERVAL (t.rn % 45) DAY) + INTERVAL (t.rn % 1440) MINUTE,
+    x.seed_idx,
+    CONCAT('BULK_ORDER_', LPAD(x.seed_idx, 6, '0')),
+    ((x.seed_idx - 1) % (SELECT MAX(MaKhachHang) FROM KhachHang)) + 1,
+    ((x.seed_idx - 1) % (SELECT MAX(MaNhanVien) FROM NhanVien)) + 1,
+    CASE WHEN x.seed_idx % 5 = 0 THEN ((x.seed_idx - 1) % (SELECT MAX(MaKhuyenMai) FROM KhuyenMai)) + 1 ELSE NULL END,
+    DATE_SUB(NOW(), INTERVAL (x.seed_idx % 45) DAY) + INTERVAL (x.seed_idx % 1440) MINUTE,
     CASE
-        WHEN t.rn % 20 = 0 THEN 'Đã hủy'
-        WHEN t.rn % 8 = 0 THEN 'Chưa thanh toán'
+        WHEN x.seed_idx % 30 = 0 THEN 'Đã hủy'
+        WHEN x.seed_idx % 9 = 0 THEN 'Chưa thanh toán'
         ELSE 'Đã thanh toán'
     END
-FROM tmp_ticket_seed t;
+FROM (
+    SELECT DISTINCT FLOOR((t.rn - 1) / @tickets_per_order) + 1 AS seed_idx
+    FROM tmp_ticket_seed t
+) x;
 
 INSERT INTO DonHang (MaKhachHang, MaNhanVien, MaKhuyenMai, NgayLap, TrangThaiDonHang, GhiChu)
 SELECT
@@ -627,12 +646,17 @@ SELECT
     t.GiaVe
 FROM tmp_order_seed os
 JOIN DonHang d ON d.GhiChu = os.seed_code
-JOIN tmp_ticket_seed t ON t.rn = os.seed_idx;
+JOIN tmp_ticket_seed t ON FLOOR((t.rn - 1) / @tickets_per_order) + 1 = os.seed_idx;
 
 UPDATE Ve v
 JOIN ChiTietDonHangVe ct ON ct.MaVe = v.MaVe
-SET v.TrangThaiVe = 'Đã bán'
-WHERE v.TrangThaiVe = 'Chưa bán';
+JOIN DonHang d ON d.MaDonHang = ct.MaDonHang
+SET v.TrangThaiVe = CASE
+    WHEN d.TrangThaiDonHang = 'Đã thanh toán' THEN 'Đã bán'
+    WHEN d.TrangThaiDonHang = 'Đã hủy' THEN 'Đã hủy'
+    ELSE 'Đã bán'
+END
+WHERE d.GhiChu LIKE 'BULK_ORDER_%';
 
 -- 7) Chi tiết sản phẩm cho khoảng 60% đơn
 INSERT INTO ChiTietDonHangSanPham (MaDonHang, MaSanPham, SoLuong, DonGiaBan)
@@ -668,6 +692,31 @@ LEFT JOIN (
 LEFT JOIN ThanhToan tt ON tt.MaDonHang = d.MaDonHang
 WHERE d.TrangThaiDonHang = 'Đã thanh toán'
   AND tt.MaThanhToan IS NULL;
+
+-- 9) Ghi nhận giao dịch thất bại cho một phần đơn chưa thanh toán/đã hủy
+INSERT INTO ThanhToan (MaDonHang, SoTien, PhuongThucThanhToan, ThoiGianThanhToan, TrangThaiThanhToan)
+SELECT
+        d.MaDonHang,
+        COALESCE(vt.tong_ve, 0) + COALESCE(st.tong_sp, 0),
+        ELT((d.MaDonHang % 3) + 1, 'Tiền mặt', 'Chuyển khoản', 'Ví điện tử'),
+        DATE_ADD(d.NgayLap, INTERVAL 5 MINUTE),
+        'Thất bại'
+FROM DonHang d
+LEFT JOIN (
+        SELECT MaDonHang, SUM(DonGiaBan) AS tong_ve
+        FROM ChiTietDonHangVe
+        GROUP BY MaDonHang
+) vt ON vt.MaDonHang = d.MaDonHang
+LEFT JOIN (
+        SELECT MaDonHang, SUM(SoLuong * DonGiaBan) AS tong_sp
+        FROM ChiTietDonHangSanPham
+        GROUP BY MaDonHang
+) st ON st.MaDonHang = d.MaDonHang
+LEFT JOIN ThanhToan tt ON tt.MaDonHang = d.MaDonHang
+WHERE d.GhiChu LIKE 'BULK_ORDER_%'
+    AND d.TrangThaiDonHang IN ('Chưa thanh toán', 'Đã hủy')
+    AND d.MaDonHang % 4 = 0
+    AND tt.MaThanhToan IS NULL;
 
 DROP TEMPORARY TABLE IF EXISTS tmp_order_seed;
 DROP TEMPORARY TABLE IF EXISTS tmp_ticket_seed;

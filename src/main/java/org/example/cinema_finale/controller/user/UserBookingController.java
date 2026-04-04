@@ -19,10 +19,12 @@ import org.example.cinema_finale.dto.BanVeThanhToanFormDTO;
 import org.example.cinema_finale.dto.CapNhatVeDonHangDTO;
 import org.example.cinema_finale.dto.DonHangDTO;
 import org.example.cinema_finale.dto.DonHangTamFormDTO;
+import org.example.cinema_finale.dto.KhuyenMaiDTO;
 import org.example.cinema_finale.dto.PhimDTO;
 import org.example.cinema_finale.dto.SuatChieuDTO;
 import org.example.cinema_finale.dto.VeDTO;
 import org.example.cinema_finale.service.BanVeService;
+import org.example.cinema_finale.service.KhuyenMaiService;
 import org.example.cinema_finale.service.PhimService;
 import org.example.cinema_finale.service.SuatChieuService;
 import org.example.cinema_finale.util.SessionManager;
@@ -40,6 +42,7 @@ public class UserBookingController {
     private final PhimService phimService = new PhimService();
     private final SuatChieuService suatChieuService = new SuatChieuService();
     private final BanVeService banVeService = new BanVeService();
+    private final KhuyenMaiService khuyenMaiService = new KhuyenMaiService();
 
     private List<PhimDTO> allMovies = new ArrayList<>();
     private List<SuatChieuDTO> currentShowtimes = new ArrayList<>();
@@ -48,6 +51,7 @@ public class UserBookingController {
     private SuatChieuDTO selectedShowtime;
     private List<VeDTO> selectedTickets = new ArrayList<>();
     private ProductSelectionResult selectedProducts = new ProductSelectionResult(BigDecimal.ZERO, "Không chọn sản phẩm", new LinkedHashMap<>());
+    private KhuyenMaiDTO selectedPromotion;
 
     public UserBookingController(UserFrame view) {
         this.view = view;
@@ -72,6 +76,7 @@ public class UserBookingController {
 
         view.getPaymentPanel().setBackListener(() -> view.showStep(UserFrame.STEP_PRODUCTS));
         view.getPaymentPanel().setPayListener(this::onPay);
+        view.getPaymentPanel().setPromotionChangeListener(this::onPromotionChanged);
     }
 
     private void onLogout() {
@@ -136,9 +141,39 @@ public class UserBookingController {
 
     private void onProductsSelected(ProductSelectionResult result) {
         this.selectedProducts = result;
+        loadPromotionsForPayment();
         String summary = buildPaymentSummary();
         view.getPaymentPanel().setSummaryText(summary);
         view.showStep(UserFrame.STEP_PAYMENT);
+    }
+
+    private void onPromotionChanged() {
+        selectedPromotion = view.getPaymentPanel().getSelectedPromotion();
+        if (!isPromotionEligibleForCurrentOrder(selectedPromotion)) {
+            BigDecimal minOrder = selectedPromotion != null && selectedPromotion.getDonHangToiThieu() != null
+                    ? selectedPromotion.getDonHangToiThieu()
+                    : BigDecimal.ZERO;
+            selectedPromotion = null;
+            view.getPaymentPanel().clearPromotionSelection();
+            JOptionPane.showMessageDialog(
+                    view,
+                    "Đơn hàng hiện tại chưa đạt tối thiểu " + formatVnd(minOrder) + " để áp dụng khuyến mãi này.",
+                    "Không đủ điều kiện khuyến mãi",
+                    JOptionPane.WARNING_MESSAGE
+            );
+        }
+        view.getPaymentPanel().setSummaryText(buildPaymentSummary());
+    }
+
+    private void loadPromotionsForPayment() {
+        List<KhuyenMaiDTO> promotions;
+        try {
+            promotions = khuyenMaiService.getKhuyenMaiDangHieuLuc();
+        } catch (RuntimeException ex) {
+            promotions = List.of();
+        }
+        view.getPaymentPanel().setPromotions(promotions);
+        selectedPromotion = view.getPaymentPanel().getSelectedPromotion();
     }
 
     private void onPay(String paymentMethod) {
@@ -150,6 +185,22 @@ public class UserBookingController {
 
             if (paymentMethod == null || paymentMethod.isBlank()) {
                 JOptionPane.showMessageDialog(view, "Vui lòng chọn phương thức thanh toán.");
+                return;
+            }
+
+            if (!isPromotionEligibleForCurrentOrder(selectedPromotion)) {
+                BigDecimal minOrder = selectedPromotion != null && selectedPromotion.getDonHangToiThieu() != null
+                        ? selectedPromotion.getDonHangToiThieu()
+                        : BigDecimal.ZERO;
+                selectedPromotion = null;
+                view.getPaymentPanel().clearPromotionSelection();
+                view.getPaymentPanel().setSummaryText(buildPaymentSummary());
+                JOptionPane.showMessageDialog(
+                        view,
+                        "Đơn hàng hiện tại chưa đạt tối thiểu " + formatVnd(minOrder) + " để áp dụng khuyến mãi đã chọn.",
+                        "Không đủ điều kiện khuyến mãi",
+                        JOptionPane.WARNING_MESSAGE
+                );
                 return;
             }
 
@@ -171,6 +222,7 @@ public class UserBookingController {
                         ticketIds,
                         sanPhamItems,
                         paymentMethod,
+                    selectedPromotion == null ? null : selectedPromotion.getMaKhuyenMai(),
                         selectedProducts == null ? null : selectedProducts.note()
                 );
 
@@ -237,7 +289,9 @@ public class UserBookingController {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal productTotal = selectedProducts == null ? BigDecimal.ZERO : selectedProducts.extraAmount();
-        BigDecimal uiTotal = ticketTotal.add(productTotal);
+        BigDecimal grossTotal = ticketTotal.add(productTotal);
+        BigDecimal discount = calculatePromotionDiscount(grossTotal, selectedPromotion);
+        BigDecimal uiTotal = grossTotal.subtract(discount).max(BigDecimal.ZERO);
 
         String showtimeText = selectedShowtime == null || selectedShowtime.getNgayGioChieu() == null
                 ? "-"
@@ -255,6 +309,8 @@ public class UserBookingController {
                 + "Tiền vé: " + formatVnd(ticketTotal) + "\n"
             + "Đồ ăn và thức uống: " + formatVnd(productTotal) + "\n"
             + "Chi tiết sản phẩm: " + (selectedProducts == null ? "Không chọn sản phẩm" : selectedProducts.note()) + "\n"
+            + "Khuyến mãi: " + formatPromotionLabel(selectedPromotion) + "\n"
+            + "Giảm giá: -" + formatVnd(discount) + "\n"
             + "Tổng thanh toán dự kiến: " + formatVnd(uiTotal);
     }
 
@@ -264,7 +320,9 @@ public class UserBookingController {
             .filter(v -> v != null)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal productTotal = selectedProducts == null ? BigDecimal.ZERO : selectedProducts.extraAmount();
-        BigDecimal uiTotal = ticketTotal.add(productTotal);
+        BigDecimal grossTotal = ticketTotal.add(productTotal);
+        BigDecimal discount = calculatePromotionDiscount(grossTotal, selectedPromotion);
+        BigDecimal uiTotal = grossTotal.subtract(discount).max(BigDecimal.ZERO);
 
         StringBuilder sb = new StringBuilder();
         sb.append("THANH TOÁN THÀNH CÔNG\n\n");
@@ -281,6 +339,8 @@ public class UserBookingController {
         sb.append("Ghế: ").append(selectedTickets.stream().map(VeDTO::getViTriGhe).collect(Collectors.joining(", "))).append("\n");
         sb.append("Số lượng vé: ").append(selectedTickets.size()).append("\n");
         sb.append("Sản phẩm: ").append(selectedProducts == null ? "Không chọn sản phẩm" : selectedProducts.note()).append("\n");
+        sb.append("Khuyến mãi: ").append(formatPromotionLabel(selectedPromotion)).append("\n");
+        sb.append("Giảm giá: -").append(formatVnd(discount)).append("\n");
 
         if (order != null && order.getTongTien() != null) {
             sb.append("Tổng thanh toán: ").append(formatVnd(order.getTongTien())).append("\n");
@@ -298,6 +358,8 @@ public class UserBookingController {
         selectedShowtime = null;
         selectedTickets = new ArrayList<>();
         selectedProducts = new ProductSelectionResult(BigDecimal.ZERO, "Không chọn sản phẩm", new LinkedHashMap<>());
+        selectedPromotion = null;
+        view.getPaymentPanel().setPromotions(List.of());
 
         loadMovies();
         view.showStep(UserFrame.STEP_MOVIES);
@@ -333,6 +395,57 @@ public class UserBookingController {
             case "ZALOPAY" -> "ZaloPay";
             default -> paymentMethod;
         };
+    }
+
+    private String formatPromotionLabel(KhuyenMaiDTO promotion) {
+        if (promotion == null) {
+            return "Không áp dụng";
+        }
+        return promotion.getTenKhuyenMai() == null || promotion.getTenKhuyenMai().isBlank()
+                ? "Khuyến mãi #" + promotion.getMaKhuyenMai()
+                : promotion.getTenKhuyenMai();
+    }
+
+    private BigDecimal calculatePromotionDiscount(BigDecimal grossTotal, KhuyenMaiDTO promotion) {
+        if (grossTotal == null || grossTotal.compareTo(BigDecimal.ZERO) <= 0 || promotion == null) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal minOrder = promotion.getDonHangToiThieu() == null ? BigDecimal.ZERO : promotion.getDonHangToiThieu();
+        if (grossTotal.compareTo(minOrder) < 0) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal raw;
+        if ("%".equals(promotion.getKieuGiaTri())) {
+            BigDecimal percent = promotion.getGiaTri() == null ? BigDecimal.ZERO : promotion.getGiaTri();
+            raw = grossTotal.multiply(percent).divide(BigDecimal.valueOf(100), 0, java.math.RoundingMode.HALF_UP);
+        } else {
+            raw = promotion.getGiaTri() == null ? BigDecimal.ZERO : promotion.getGiaTri();
+        }
+
+        if (raw.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO;
+        }
+        return raw.min(grossTotal);
+    }
+
+    private boolean isPromotionEligibleForCurrentOrder(KhuyenMaiDTO promotion) {
+        if (promotion == null) {
+            return true;
+        }
+        BigDecimal grossTotal = calculateCurrentGrossTotal();
+        BigDecimal minOrder = promotion.getDonHangToiThieu() == null ? BigDecimal.ZERO : promotion.getDonHangToiThieu();
+        return grossTotal.compareTo(minOrder) >= 0;
+    }
+
+    private BigDecimal calculateCurrentGrossTotal() {
+        BigDecimal ticketTotal = selectedTickets.stream()
+                .map(VeDTO::getGiaVe)
+                .filter(v -> v != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal productTotal = selectedProducts == null ? BigDecimal.ZERO : selectedProducts.extraAmount();
+        return ticketTotal.add(productTotal);
     }
 
     private void safeCancelOrder(Integer orderId) {

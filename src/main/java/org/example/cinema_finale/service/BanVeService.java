@@ -19,6 +19,7 @@ import org.example.cinema_finale.entity.ChiTietDonHangSanPham;
 import org.example.cinema_finale.entity.ChiTietDonHangVe;
 import org.example.cinema_finale.entity.DonHang;
 import org.example.cinema_finale.entity.KhachHang;
+import org.example.cinema_finale.entity.KhuyenMai;
 import org.example.cinema_finale.entity.NhanVien;
 import org.example.cinema_finale.entity.SanPham;
 import org.example.cinema_finale.entity.TaiKhoan;
@@ -114,6 +115,7 @@ public class BanVeService {
     public String datVeVaThanhToanKhachHang(List<Integer> dsMaVe,
                                             List<DatSanPhamItem> dsSanPham,
                                             String phuongThucThanhToan,
+                                            Integer maKhuyenMai,
                                             String ghiChu) {
         AuthorizationUtil.requireLogin();
 
@@ -149,9 +151,12 @@ public class BanVeService {
                 return rollbackAndReturn(tx, "Không có nhân viên khả dụng để ghi nhận đơn hàng.");
             }
 
+            KhuyenMai khuyenMai = resolveEligiblePromotion(em, maKhuyenMai);
+
             DonHang donHang = new DonHang();
             donHang.setKhachHang(em.getReference(KhachHang.class, khachHang.getMaKhachHang()));
             donHang.setNhanVien(fallbackNhanVien);
+            donHang.setKhuyenMai(khuyenMai);
             donHang.setGhiChu(trimToNull(ghiChu));
             donHang.setNgayLap(LocalDateTime.now());
             donHang.setTrangThaiDonHang(ORDER_CHUA_THANH_TOAN);
@@ -233,9 +238,12 @@ public class BanVeService {
                 }
             }
 
+            BigDecimal giamGia = tinhTienGiamKhuyenMai(tongTien, khuyenMai);
+            BigDecimal thanhTien = tongTien.subtract(giamGia).max(BigDecimal.ZERO);
+
             ThanhToan thanhToan = new ThanhToan();
             thanhToan.setDonHang(donHang);
-            thanhToan.setSoTien(tongTien);
+            thanhToan.setSoTien(thanhTien);
             thanhToan.setPhuongThucThanhToan(phuongThucThanhToan.trim());
             thanhToan.setThoiGianThanhToan(LocalDateTime.now());
             thanhToan.setTrangThaiThanhToan(PAYMENT_THANH_CONG);
@@ -700,6 +708,49 @@ public class BanVeService {
             tx.rollback();
         }
         return message;
+    }
+
+    private KhuyenMai resolveEligiblePromotion(EntityManager em, Integer maKhuyenMai) {
+        if (maKhuyenMai == null) {
+            return null;
+        }
+
+        KhuyenMai km = em.find(KhuyenMai.class, maKhuyenMai);
+        if (km == null) {
+            return null;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        boolean isActive = "Hoạt động".equalsIgnoreCase(km.getTrangThai())
+                && (km.getNgayBatDau() == null || !now.isBefore(km.getNgayBatDau()))
+                && (km.getNgayKetThuc() == null || !now.isAfter(km.getNgayKetThuc()));
+
+        return isActive ? km : null;
+    }
+
+    private BigDecimal tinhTienGiamKhuyenMai(BigDecimal tongTien, KhuyenMai km) {
+        if (km == null || tongTien == null || tongTien.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal toiThieu = km.getDonHangToiThieu() == null ? BigDecimal.ZERO : km.getDonHangToiThieu();
+        if (tongTien.compareTo(toiThieu) < 0) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal raw;
+        if ("%".equals(km.getKieuGiaTri())) {
+            BigDecimal percent = km.getGiaTri() == null ? BigDecimal.ZERO : km.getGiaTri();
+            raw = tongTien.multiply(percent).divide(BigDecimal.valueOf(100), 0, java.math.RoundingMode.HALF_UP);
+        } else {
+            raw = km.getGiaTri() == null ? BigDecimal.ZERO : km.getGiaTri();
+        }
+
+        if (raw.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO;
+        }
+
+        return raw.min(tongTien);
     }
 
     private Integer parseId(String value) {

@@ -1,5 +1,10 @@
 package org.example.cinema_finale.service;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.example.cinema_finale.dao.KhuyenMaiDao;
 import org.example.cinema_finale.dao.LoaiKhuyenMaiDao;
 import org.example.cinema_finale.dto.KhuyenMaiDTO;
@@ -7,11 +12,6 @@ import org.example.cinema_finale.dto.KhuyenMaiFormDTO;
 import org.example.cinema_finale.entity.KhuyenMai;
 import org.example.cinema_finale.entity.LoaiKhuyenMai;
 import org.example.cinema_finale.util.AuthorizationUtil;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
 
 public class KhuyenMaiService {
 
@@ -70,7 +70,7 @@ public class KhuyenMaiService {
     }
 
     public List<KhuyenMaiDTO> getKhuyenMaiDangHieuLuc() {
-        AuthorizationUtil.requireStaff();
+        AuthorizationUtil.requireStaffOrCustomer();
         return khuyenMaiDao.findHieuLucTrongKhoang(LocalDateTime.now()).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
