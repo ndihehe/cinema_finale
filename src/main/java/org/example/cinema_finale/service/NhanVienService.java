@@ -308,6 +308,17 @@ public class NhanVienService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
+    public List<NhanVienDTO> search(String key) {
+        return nhanVienDao.findAll().stream()
+                .filter(nv ->
+                        nv.getHoTen().toLowerCase().contains(key.toLowerCase()) ||
+                                nv.getSoDienThoai().contains(key) ||
+                                (nv.getEmail() != null && nv.getEmail().toLowerCase().contains(key.toLowerCase()))
+                )
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
     }

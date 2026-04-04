@@ -7,6 +7,15 @@ public class PhongChieuDTO {
     private String heThongAmThanh;
     private String trangThaiPhong;
 
+    private int soHang;
+    private int soCot;
+
+    public int getSoHang() { return soHang; }
+    public void setSoHang(int soHang) { this.soHang = soHang; }
+
+    public int getSoCot() { return soCot; }
+    public void setSoCot(int soCot) { this.soCot = soCot; }
+
     public PhongChieuDTO() {
     }
 

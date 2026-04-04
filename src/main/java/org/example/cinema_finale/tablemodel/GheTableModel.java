@@ -1,9 +1,10 @@
 package org.example.cinema_finale.tablemodel;
 
-import org.example.cinema_finale.dto.GheDTO;
+import java.util.List;
 
 import javax.swing.table.AbstractTableModel;
-import java.util.List;
+
+import org.example.cinema_finale.dto.GheDTO;
 
 public class GheTableModel extends AbstractTableModel {
 
@@ -30,6 +31,11 @@ public class GheTableModel extends AbstractTableModel {
     @Override
     public int getColumnCount() {
         return columns.length;
+    }
+
+    @Override
+    public String getColumnName(int column) {
+        return columns[column];
     }
 
     @Override

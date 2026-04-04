@@ -1,347 +1,139 @@
 package org.example.cinema_finale.service;
 
-import org.example.cinema_finale.dao.ThongKeDoanhSoDao;
-import org.example.cinema_finale.dto.ThongKeDoanhSoDTO;
-import org.example.cinema_finale.entity.ChiTietDonHangVe;
-import org.example.cinema_finale.entity.DonHang;
-import org.example.cinema_finale.entity.KhuyenMai;
-import org.example.cinema_finale.entity.Phim;
-import org.example.cinema_finale.entity.PhongChieu;
-import org.example.cinema_finale.entity.SuatChieu;
-import org.example.cinema_finale.entity.ThanhToan;
-import org.example.cinema_finale.entity.Ve;
-import org.example.cinema_finale.util.AuthorizationUtil;
-
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+
+import org.example.cinema_finale.dao.ThongKeDoanhSoDao;
+import org.example.cinema_finale.dto.ThongKeDoanhSoDTO;
 
 public class ThongKeDoanhSoService {
 
-    private static final String PAYMENT_THANH_CONG = "Thành công";
-    private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
+    private static final LocalDateTime MYSQL_SAFE_MIN_DATETIME = LocalDateTime.of(1970, 1, 1, 0, 0, 0);
 
-    private final ThongKeDoanhSoDao thongKeDoanhSoDao;
+    private ThongKeDoanhSoDao dao = new ThongKeDoanhSoDao();
 
-    public ThongKeDoanhSoService() {
-        this.thongKeDoanhSoDao = new ThongKeDoanhSoDao();
-    }
+    // ================= THEO NGÀY =================
+    public List<ThongKeDoanhSoDTO> thongKeTheoNgay(LocalDate fromDate, LocalDate toDate){
 
-    public ThongKeDoanhSoService(ThongKeDoanhSoDao thongKeDoanhSoDao) {
-        this.thongKeDoanhSoDao = thongKeDoanhSoDao;
-    }
-
-    public List<ThongKeDoanhSoDTO> thongKeTheoNgay(LocalDate tuNgay, LocalDate denNgay) {
-        AuthorizationUtil.requireStaff();
-
-        if (tuNgay == null || denNgay == null || tuNgay.isAfter(denNgay)) {
+        if (fromDate == null || toDate == null || fromDate.isAfter(toDate)) {
             return List.of();
         }
 
-        LocalDateTime tuThoiGian = tuNgay.atStartOfDay();
-        LocalDateTime denThoiGian = denNgay.plusDays(1).atStartOfDay();
+        LocalDateTime from = fromDate.atStartOfDay();
+        LocalDateTime to = toDate.plusDays(1).atStartOfDay();
 
-        List<DonHang> donHangs = thongKeDoanhSoDao.findDonHangDaThanhToanTrongKhoang(tuThoiGian, denThoiGian);
-        Map<String, Bucket> buckets = new LinkedHashMap<>();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        List<Object[]> rows = dao.thongKeVeRaw(from, to);
 
-        for (DonHang donHang : donHangs) {
-            ThanhToan thanhToan = timThanhToanThanhCongTrongKhoang(donHang, tuThoiGian, denThoiGian);
-            if (thanhToan == null) {
-                continue;
-            }
+        Map<String, ThongKeDoanhSoDTO> map = new LinkedHashMap<>();
 
-            String nhan = thanhToan.getThoiGianThanhToan().toLocalDate().format(formatter);
-            Bucket bucket = buckets.computeIfAbsent(nhan, k -> new Bucket());
+        for (Object[] row : rows){
+            LocalDateTime thoiGianThanhToan = (LocalDateTime) row[1];
+            BigDecimal doanhThu = toBigDecimal(row[1]);
 
-            BigDecimal tongDoanhThuDonHang = tinhTongDoanhThuDonHang(donHang);
-            BigDecimal tongGiamGiaDonHang = tinhTongGiamGiaDonHang(donHang, tongDoanhThuDonHang);
-            int soLuongVe = layDanhSachChiTietHopLe(donHang).size();
+            String ngay = thoiGianThanhToan.toLocalDate().toString();
 
-            bucket.soLuongVeBan += soLuongVe;
-            bucket.tongDoanhThu = bucket.tongDoanhThu.add(tongDoanhThuDonHang);
-            bucket.tongGiamGia = bucket.tongGiamGia.add(tongGiamGiaDonHang);
+            map.putIfAbsent(ngay,
+                    new ThongKeDoanhSoDTO(ngay,0,
+                            BigDecimal.ZERO,BigDecimal.ZERO,BigDecimal.ZERO));
+
+            ThongKeDoanhSoDTO dto = map.get(ngay);
+
+            dto.setSoLuongVeBan(dto.getSoLuongVeBan() + 1);
+            dto.setTongDoanhThu(dto.getTongDoanhThu().add(doanhThu));
+            dto.setDoanhThuThuan(dto.getTongDoanhThu());
         }
 
-        return toDTOList(buckets);
+        return new ArrayList<>(map.values());
     }
 
-    public List<ThongKeDoanhSoDTO> thongKeTheoThang(int nam) {
-        AuthorizationUtil.requireStaff();
+    // ================= THEO THÁNG =================
+    public List<ThongKeDoanhSoDTO> thongKeTheoThang(int year){
 
-        if (nam <= 0) {
+        if (year <= 0) {
             return List.of();
         }
 
-        LocalDateTime tuThoiGian = LocalDate.of(nam, 1, 1).atStartOfDay();
-        LocalDateTime denThoiGian = LocalDate.of(nam + 1, 1, 1).atStartOfDay();
+        LocalDateTime from = LocalDate.of(year,1,1).atStartOfDay();
+        LocalDateTime to = LocalDate.of(year+1,1,1).atStartOfDay();
 
-        List<DonHang> donHangs = thongKeDoanhSoDao.findDonHangDaThanhToanTrongKhoang(tuThoiGian, denThoiGian);
-        Map<String, Bucket> buckets = new LinkedHashMap<>();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/yyyy");
+        List<Object[]> rows = dao.thongKeVeRaw(from, to);
 
-        for (DonHang donHang : donHangs) {
-            ThanhToan thanhToan = timThanhToanThanhCongTrongKhoang(donHang, tuThoiGian, denThoiGian);
-            if (thanhToan == null) {
-                continue;
-            }
+        Map<Integer, ThongKeDoanhSoDTO> map = new LinkedHashMap<>();
 
-            String nhan = YearMonth.from(thanhToan.getThoiGianThanhToan()).format(formatter);
-            Bucket bucket = buckets.computeIfAbsent(nhan, k -> new Bucket());
+        for (Object[] row : rows){
+            LocalDateTime thoiGianThanhToan = (LocalDateTime) row[1];
+            BigDecimal doanhThu = toBigDecimal(row[1]);
 
-            BigDecimal tongDoanhThuDonHang = tinhTongDoanhThuDonHang(donHang);
-            BigDecimal tongGiamGiaDonHang = tinhTongGiamGiaDonHang(donHang, tongDoanhThuDonHang);
-            int soLuongVe = layDanhSachChiTietHopLe(donHang).size();
+            int month = thoiGianThanhToan.getMonthValue();
 
-            bucket.soLuongVeBan += soLuongVe;
-            bucket.tongDoanhThu = bucket.tongDoanhThu.add(tongDoanhThuDonHang);
-            bucket.tongGiamGia = bucket.tongGiamGia.add(tongGiamGiaDonHang);
+            map.putIfAbsent(month,
+                    new ThongKeDoanhSoDTO("Tháng "+month,0,
+                            BigDecimal.ZERO,BigDecimal.ZERO,BigDecimal.ZERO));
+
+            ThongKeDoanhSoDTO dto = map.get(month);
+
+            dto.setSoLuongVeBan(dto.getSoLuongVeBan() + 1);
+            dto.setTongDoanhThu(dto.getTongDoanhThu().add(doanhThu));
+            dto.setDoanhThuThuan(dto.getTongDoanhThu());
         }
 
-        return toDTOList(buckets);
+        return new ArrayList<>(map.values());
     }
 
-    public List<ThongKeDoanhSoDTO> thongKeTheoPhim(LocalDate tuNgay, LocalDate denNgay) {
-        AuthorizationUtil.requireStaff();
+    // ================= THEO PHIM =================
+    public List<ThongKeDoanhSoDTO> thongKeTheoPhim(LocalDate from, LocalDate to){
 
-        if (tuNgay == null || denNgay == null || tuNgay.isAfter(denNgay)) {
+        LocalDateTime fromDate = (from == null)
+                ? MYSQL_SAFE_MIN_DATETIME
+                : from.atStartOfDay();
+
+        LocalDateTime toDate = (to == null)
+                ? LocalDateTime.now()
+                : to.atTime(23,59,59);
+
+        if (!fromDate.isBefore(toDate)) {
             return List.of();
         }
 
-        LocalDateTime tuThoiGian = tuNgay.atStartOfDay();
-        LocalDateTime denThoiGian = denNgay.plusDays(1).atStartOfDay();
+        List<Object[]> rows = dao.thongKeTheoPhimRaw(fromDate, toDate);
+        Map<String, ThongKeDoanhSoDTO> map = new LinkedHashMap<>();
 
-        List<DonHang> donHangs = thongKeDoanhSoDao.findDonHangDaThanhToanTrongKhoang(tuThoiGian, denThoiGian);
-        Map<String, Bucket> buckets = new LinkedHashMap<>();
+        for (Object[] row : rows){
+            String phim = row[0] == null ? "Không rõ" : row[0].toString();
+            BigDecimal donGiaBan = toBigDecimal(row[1]);
 
-        for (DonHang donHang : donHangs) {
-            ThanhToan thanhToan = timThanhToanThanhCongTrongKhoang(donHang, tuThoiGian, denThoiGian);
-            if (thanhToan == null) {
-                continue;
-            }
+            map.putIfAbsent(phim,
+                    new ThongKeDoanhSoDTO(phim,0,
+                            BigDecimal.ZERO,BigDecimal.ZERO,BigDecimal.ZERO));
 
-            List<ChiTietDonHangVe> chiTietList = layDanhSachChiTietHopLe(donHang);
-            BigDecimal tongDoanhThuDonHang = tinhTongDoanhThuDonHang(donHang);
-            BigDecimal tongGiamGiaDonHang = tinhTongGiamGiaDonHang(donHang, tongDoanhThuDonHang);
+            ThongKeDoanhSoDTO dto = map.get(phim);
 
-            for (ChiTietDonHangVe chiTiet : chiTietList) {
-                Ve ve = chiTiet.getVe();
-                SuatChieu suatChieu = ve.getSuatChieu();
-                Phim phim = suatChieu == null ? null : suatChieu.getPhim();
-
-                String nhan = (phim == null || phim.getTenPhim() == null || phim.getTenPhim().trim().isEmpty())
-                        ? "Không xác định"
-                        : phim.getTenPhim().trim();
-
-                Bucket bucket = buckets.computeIfAbsent(nhan, k -> new Bucket());
-
-                BigDecimal doanhThuVe = safeMoney(chiTiet.getDonGiaBan());
-                BigDecimal giamGiaPhanBo = phanBoGiamGia(tongGiamGiaDonHang, tongDoanhThuDonHang, doanhThuVe);
-
-                bucket.soLuongVeBan += 1;
-                bucket.tongDoanhThu = bucket.tongDoanhThu.add(doanhThuVe);
-                bucket.tongGiamGia = bucket.tongGiamGia.add(giamGiaPhanBo);
-            }
+            dto.setSoLuongVeBan(dto.getSoLuongVeBan()+1);
+            dto.setTongDoanhThu(dto.getTongDoanhThu().add(donGiaBan));
+            dto.setDoanhThuThuan(dto.getTongDoanhThu());
         }
 
-        return toDTOList(buckets);
+        return new ArrayList<>(map.values());
     }
 
-    public List<ThongKeDoanhSoDTO> thongKeTheoPhong(LocalDate tuNgay, LocalDate denNgay) {
-        AuthorizationUtil.requireStaff();
-
-        if (tuNgay == null || denNgay == null || tuNgay.isAfter(denNgay)) {
-            return List.of();
-        }
-
-        LocalDateTime tuThoiGian = tuNgay.atStartOfDay();
-        LocalDateTime denThoiGian = denNgay.plusDays(1).atStartOfDay();
-
-        List<DonHang> donHangs = thongKeDoanhSoDao.findDonHangDaThanhToanTrongKhoang(tuThoiGian, denThoiGian);
-        Map<String, Bucket> buckets = new LinkedHashMap<>();
-
-        for (DonHang donHang : donHangs) {
-            ThanhToan thanhToan = timThanhToanThanhCongTrongKhoang(donHang, tuThoiGian, denThoiGian);
-            if (thanhToan == null) {
-                continue;
-            }
-
-            List<ChiTietDonHangVe> chiTietList = layDanhSachChiTietHopLe(donHang);
-            BigDecimal tongDoanhThuDonHang = tinhTongDoanhThuDonHang(donHang);
-            BigDecimal tongGiamGiaDonHang = tinhTongGiamGiaDonHang(donHang, tongDoanhThuDonHang);
-
-            for (ChiTietDonHangVe chiTiet : chiTietList) {
-                Ve ve = chiTiet.getVe();
-                SuatChieu suatChieu = ve.getSuatChieu();
-                PhongChieu phongChieu = suatChieu == null ? null : suatChieu.getPhongChieu();
-
-                String nhan = (phongChieu == null || phongChieu.getTenPhongChieu() == null || phongChieu.getTenPhongChieu().trim().isEmpty())
-                        ? "Không xác định"
-                        : phongChieu.getTenPhongChieu().trim();
-
-                Bucket bucket = buckets.computeIfAbsent(nhan, k -> new Bucket());
-
-                BigDecimal doanhThuVe = safeMoney(chiTiet.getDonGiaBan());
-                BigDecimal giamGiaPhanBo = phanBoGiamGia(tongGiamGiaDonHang, tongDoanhThuDonHang, doanhThuVe);
-
-                bucket.soLuongVeBan += 1;
-                bucket.tongDoanhThu = bucket.tongDoanhThu.add(doanhThuVe);
-                bucket.tongGiamGia = bucket.tongGiamGia.add(giamGiaPhanBo);
-            }
-        }
-
-        return toDTOList(buckets);
-    }
-
-    private ThanhToan timThanhToanThanhCongTrongKhoang(DonHang donHang, LocalDateTime tu, LocalDateTime den) {
-        if (donHang == null || donHang.getThanhToans() == null) {
-            return null;
-        }
-
-        for (Object obj : donHang.getThanhToans()) {
-            if (!(obj instanceof ThanhToan thanhToan)) {
-                continue;
-            }
-
-            if (!PAYMENT_THANH_CONG.equalsIgnoreCase(thanhToan.getTrangThaiThanhToan())) {
-                continue;
-            }
-
-            if (thanhToan.getThoiGianThanhToan() == null) {
-                continue;
-            }
-
-            if (!thanhToan.getThoiGianThanhToan().isBefore(tu)
-                    && thanhToan.getThoiGianThanhToan().isBefore(den)) {
-                return thanhToan;
-            }
-        }
-
-        return null;
-    }
-
-    private List<ChiTietDonHangVe> layDanhSachChiTietHopLe(DonHang donHang) {
-        List<ChiTietDonHangVe> result = new ArrayList<>();
-        if (donHang == null || donHang.getChiTietDonHangVes() == null) {
-            return result;
-        }
-
-        Set<Integer> daCo = new HashSet<>();
-
-        for (Object obj : donHang.getChiTietDonHangVes()) {
-            if (!(obj instanceof ChiTietDonHangVe chiTiet)) {
-                continue;
-            }
-
-            if (chiTiet.getMaChiTietVe() != null && !daCo.add(chiTiet.getMaChiTietVe())) {
-                continue;
-            }
-
-            if (chiTiet.getVe() == null || chiTiet.getDonGiaBan() == null) {
-                continue;
-            }
-
-            result.add(chiTiet);
-        }
-
-        return result;
-    }
-
-    private BigDecimal tinhTongDoanhThuDonHang(DonHang donHang) {
-        BigDecimal tong = BigDecimal.ZERO;
-        for (ChiTietDonHangVe chiTiet : layDanhSachChiTietHopLe(donHang)) {
-            tong = tong.add(safeMoney(chiTiet.getDonGiaBan()));
-        }
-        return tong;
-    }
-
-    private BigDecimal tinhTongGiamGiaDonHang(DonHang donHang, BigDecimal tongDoanhThuDonHang) {
-        if (donHang == null || donHang.getKhuyenMai() == null) {
+    private BigDecimal toBigDecimal(Object value) {
+        if (value == null) {
             return BigDecimal.ZERO;
         }
 
-        KhuyenMai khuyenMai = donHang.getKhuyenMai();
-
-        if (khuyenMai.getGiaTri() == null || khuyenMai.getGiaTri().compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO;
+        if (value instanceof BigDecimal bigDecimal) {
+            return bigDecimal;
         }
 
-        BigDecimal donHangToiThieu = safeMoney(khuyenMai.getDonHangToiThieu());
-        if (tongDoanhThuDonHang.compareTo(donHangToiThieu) < 0) {
-            return BigDecimal.ZERO;
+        if (value instanceof Number number) {
+            return BigDecimal.valueOf(number.doubleValue());
         }
 
-        String kieuGiaTri = khuyenMai.getKieuGiaTri() == null ? "" : khuyenMai.getKieuGiaTri().trim();
-
-        BigDecimal giamGia;
-        if (kieuGiaTri.equalsIgnoreCase("%")
-                || kieuGiaTri.equalsIgnoreCase("PHAN_TRAM")
-                || kieuGiaTri.equalsIgnoreCase("PERCENT")) {
-            giamGia = tongDoanhThuDonHang
-                    .multiply(khuyenMai.getGiaTri())
-                    .divide(ONE_HUNDRED, 2, RoundingMode.HALF_UP);
-        } else {
-            giamGia = khuyenMai.getGiaTri();
-        }
-
-        if (giamGia.compareTo(tongDoanhThuDonHang) > 0) {
-            giamGia = tongDoanhThuDonHang;
-        }
-
-        return giamGia.max(BigDecimal.ZERO);
-    }
-
-    private BigDecimal phanBoGiamGia(BigDecimal tongGiamGiaDonHang, BigDecimal tongDoanhThuDonHang, BigDecimal doanhThuVe) {
-        if (tongGiamGiaDonHang.compareTo(BigDecimal.ZERO) <= 0
-                || tongDoanhThuDonHang.compareTo(BigDecimal.ZERO) <= 0
-                || doanhThuVe.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO;
-        }
-
-        return tongGiamGiaDonHang
-                .multiply(doanhThuVe)
-                .divide(tongDoanhThuDonHang, 2, RoundingMode.HALF_UP);
-    }
-
-    private List<ThongKeDoanhSoDTO> toDTOList(Map<String, Bucket> buckets) {
-        List<ThongKeDoanhSoDTO> result = new ArrayList<>();
-
-        for (Map.Entry<String, Bucket> entry : buckets.entrySet()) {
-            Bucket bucket = entry.getValue();
-
-            BigDecimal doanhThuThuan = bucket.tongDoanhThu.subtract(bucket.tongGiamGia);
-            if (doanhThuThuan.compareTo(BigDecimal.ZERO) < 0) {
-                doanhThuThuan = BigDecimal.ZERO;
-            }
-
-            result.add(new ThongKeDoanhSoDTO(
-                    entry.getKey(),
-                    bucket.soLuongVeBan,
-                    bucket.tongDoanhThu,
-                    bucket.tongGiamGia,
-                    doanhThuThuan
-            ));
-        }
-
-        return result;
-    }
-
-    private BigDecimal safeMoney(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
-
-    private static class Bucket {
-        private int soLuongVeBan = 0;
-        private BigDecimal tongDoanhThu = BigDecimal.ZERO;
-        private BigDecimal tongGiamGia = BigDecimal.ZERO;
+        return BigDecimal.ZERO;
     }
 }
