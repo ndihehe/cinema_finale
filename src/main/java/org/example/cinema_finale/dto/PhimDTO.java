@@ -12,6 +12,7 @@ public class PhimDTO {
     private String dinhDang;
     private LocalDate ngayKhoiChieu;
     private String trangThaiPhim;
+    private String posterUrl;
 
     public PhimDTO() {
     }
@@ -19,6 +20,12 @@ public class PhimDTO {
     public PhimDTO(Integer maPhim, String tenPhim, String theLoai, String daoDien,
                    Integer thoiLuong, Integer gioiHanTuoi, String dinhDang,
                    LocalDate ngayKhoiChieu, String trangThaiPhim) {
+        this(maPhim, tenPhim, theLoai, daoDien, thoiLuong, gioiHanTuoi, dinhDang, ngayKhoiChieu, trangThaiPhim, null);
+    }
+
+    public PhimDTO(Integer maPhim, String tenPhim, String theLoai, String daoDien,
+                   Integer thoiLuong, Integer gioiHanTuoi, String dinhDang,
+                   LocalDate ngayKhoiChieu, String trangThaiPhim, String posterUrl) {
         this.maPhim = maPhim;
         this.tenPhim = tenPhim;
         this.theLoai = theLoai;
@@ -28,6 +35,7 @@ public class PhimDTO {
         this.dinhDang = dinhDang;
         this.ngayKhoiChieu = ngayKhoiChieu;
         this.trangThaiPhim = trangThaiPhim;
+        this.posterUrl = posterUrl;
     }
 
     public Integer getMaPhim() { return maPhim; }
@@ -56,4 +64,7 @@ public class PhimDTO {
 
     public String getTrangThaiPhim() { return trangThaiPhim; }
     public void setTrangThaiPhim(String trangThaiPhim) { this.trangThaiPhim = trangThaiPhim; }
+
+    public String getPosterUrl() { return posterUrl; }
+    public void setPosterUrl(String posterUrl) { this.posterUrl = posterUrl; }
 }

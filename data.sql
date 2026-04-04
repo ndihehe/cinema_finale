@@ -157,6 +157,7 @@ CREATE TABLE Phim (
     ThoiLuong INT NOT NULL,
     GioiHanTuoi INT NULL,
     DinhDang VARCHAR(30) NULL,
+    PosterUrl VARCHAR(500) NULL,
     NgayKhoiChieu DATE NULL,
     TrangThaiPhim VARCHAR(30) NOT NULL DEFAULT 'Sắp chiếu',
     CONSTRAINT CK_Phim_ThoiLuong CHECK (ThoiLuong > 0),
@@ -430,4 +431,245 @@ INSERT INTO ThanhToan (MaDonHang, SoTien, PhuongThucThanhToan, ThoiGianThanhToan
 (2, 299000, 'Chuyển khoản', NOW() - INTERVAL 1 DAY + INTERVAL 10 MINUTE, 'Thành công'),
 (3, 120000, 'Ví điện tử', NOW() - INTERVAL 2 HOUR, 'Thất bại');
 
-SELECT 'Schema + seed completed' AS message;
+-- =========================================================
+-- BULK SEED DATA (REALISTIC SCALE)
+-- =========================================================
+
+-- 1) Khách hàng lớn (1,200 records)
+INSERT INTO KhachHang (HoTen, SoDienThoai, Email, GioiTinh, NgaySinh, DiemTichLuy, HangThanhVien)
+SELECT
+    CONCAT('Khách hàng ', LPAD(seq.n, 4, '0')),
+    CONCAT('098', LPAD(seq.n, 7, '0')),
+    CONCAT('khach', LPAD(seq.n, 4, '0'), '@mail.com'),
+    CASE
+        WHEN seq.n % 3 = 0 THEN 'Nam'
+        WHEN seq.n % 3 = 1 THEN 'Nữ'
+        ELSE 'Khác'
+    END,
+    DATE_ADD('1980-01-01', INTERVAL (seq.n % 9000) DAY),
+    (seq.n * 13) % 2500,
+    CASE
+        WHEN (seq.n * 13) % 2500 >= 1200 THEN 'Vàng'
+        WHEN (seq.n * 13) % 2500 >= 500 THEN 'Bạc'
+        ELSE 'Thường'
+    END
+FROM (
+    SELECT ones.n + tens.n * 10 + hundreds.n * 100 + 1 AS n
+    FROM
+        (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) ones
+        CROSS JOIN (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) tens
+        CROSS JOIN (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) hundreds
+) seq
+WHERE seq.n <= 1200
+  AND NOT EXISTS (
+      SELECT 1 FROM KhachHang k WHERE k.SoDienThoai = CONCAT('098', LPAD(seq.n, 7, '0'))
+  );
+
+-- 2) Thêm tài khoản khách hàng (500 records)
+INSERT INTO TaiKhoan (TenDangNhap, MatKhau, LoaiTaiKhoan, MaNhanVien, MaKhachHang, TrangThaiTaiKhoan, NgayTao)
+SELECT
+    CONCAT('kh_user_', LPAD(k.MaKhachHang, 5, '0')),
+    '123456',
+    'KhachHang',
+    NULL,
+    k.MaKhachHang,
+    'Hoạt động',
+    DATE_SUB(NOW(), INTERVAL (k.MaKhachHang % 365) DAY)
+FROM KhachHang k
+LEFT JOIN TaiKhoan tk ON tk.MaKhachHang = k.MaKhachHang
+WHERE tk.MaTaiKhoan IS NULL
+ORDER BY k.MaKhachHang
+LIMIT 500;
+
+-- 3) Phim lớn (120 records)
+INSERT INTO Phim (TenPhim, TheLoai, DaoDien, ThoiLuong, GioiHanTuoi, DinhDang, NgayKhoiChieu, TrangThaiPhim)
+SELECT
+    CONCAT('Phim bom tấn ', LPAD(seq.n, 3, '0')),
+    ELT((seq.n % 6) + 1, 'Hành động', 'Tình cảm', 'Hài', 'Kinh dị', 'Hoạt hình', 'Khoa học viễn tưởng'),
+    CONCAT('Đạo diễn ', CHAR(65 + (seq.n % 26))),
+    90 + (seq.n % 70),
+    ELT((seq.n % 4) + 1, 0, 13, 16, 18),
+    ELT((seq.n % 3) + 1, '2D', '3D', 'IMAX'),
+    DATE_ADD(CURDATE(), INTERVAL (seq.n - 60) DAY),
+    CASE
+        WHEN seq.n < 35 THEN 'Ngừng chiếu'
+        WHEN seq.n < 85 THEN 'Đang chiếu'
+        ELSE 'Sắp chiếu'
+    END
+FROM (
+    SELECT ones.n + tens.n * 10 + hundreds.n * 100 + 1 AS n
+    FROM
+        (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) ones
+        CROSS JOIN (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) tens
+        CROSS JOIN (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) hundreds
+) seq
+WHERE seq.n <= 120
+  AND NOT EXISTS (
+      SELECT 1 FROM Phim p WHERE p.TenPhim = CONCAT('Phim bom tấn ', LPAD(seq.n, 3, '0'))
+  );
+
+-- 4) Suất chiếu dày dữ liệu (khoảng 480 suất)
+INSERT INTO SuatChieu (MaPhim, MaPhongChieu, NgayGioChieu, GiaVeCoBan, TrangThaiSuatChieu)
+SELECT
+    ((d.day_index + s.slot_index + pc.MaPhongChieu) % (SELECT MAX(MaPhim) FROM Phim)) + 1 AS MaPhim,
+    pc.MaPhongChieu,
+    TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL d.day_offset DAY), s.gio_chieu),
+    70000 + ((d.day_index * 7000 + s.slot_index * 5000 + pc.MaPhongChieu * 3000) % 70000),
+    CASE
+        WHEN d.day_offset < 0 THEN 'Đã chiếu'
+        WHEN d.day_offset = 0 THEN 'Đang chiếu'
+        ELSE 'Sắp chiếu'
+    END
+FROM (
+    SELECT n AS day_index, n - 30 AS day_offset
+    FROM (
+        SELECT ones.n + tens.n * 10 AS n
+        FROM
+            (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) ones
+            CROSS JOIN (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) tens
+    ) dd
+    WHERE n BETWEEN 0 AND 60
+) d
+CROSS JOIN (
+    SELECT 1 AS slot_index, '09:00:00' AS gio_chieu
+    UNION ALL SELECT 2, '12:30:00'
+    UNION ALL SELECT 3, '16:00:00'
+    UNION ALL SELECT 4, '19:30:00'
+) s
+JOIN PhongChieu pc ON pc.TrangThaiPhong = 'Hoạt động'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM SuatChieu sc
+    WHERE sc.MaPhongChieu = pc.MaPhongChieu
+      AND sc.NgayGioChieu = TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL d.day_offset DAY), s.gio_chieu)
+);
+
+-- 5) Vé cho các suất mới
+INSERT INTO Ve (MaSuatChieu, MaGheNgoi, MaLoaiVe, GiaVe, TrangThaiVe)
+SELECT
+    sc.MaSuatChieu,
+    g.MaGheNgoi,
+    lv.MaLoaiVe,
+    sc.GiaVeCoBan + lv.PhuThuGia,
+    'Chưa bán'
+FROM SuatChieu sc
+JOIN GheNgoi g ON g.MaPhongChieu = sc.MaPhongChieu
+JOIN LoaiGheNgoi lgn ON lgn.MaLoaiGheNgoi = g.MaLoaiGheNgoi
+JOIN LoaiVe lv ON (
+    (lgn.TenLoaiGheNgoi = 'Ghế thường' AND lv.TenLoaiVe = 'Vé thường') OR
+    (lgn.TenLoaiGheNgoi = 'Ghế VIP' AND lv.TenLoaiVe = 'Vé VIP') OR
+    (lgn.TenLoaiGheNgoi = 'Ghế đôi' AND lv.TenLoaiVe = 'Vé đôi')
+)
+LEFT JOIN Ve v_exist ON v_exist.MaSuatChieu = sc.MaSuatChieu AND v_exist.MaGheNgoi = g.MaGheNgoi
+WHERE v_exist.MaVe IS NULL;
+
+-- 6) Đơn hàng lớn dựa trên vé chưa bán
+DROP TEMPORARY TABLE IF EXISTS tmp_ticket_seed;
+CREATE TEMPORARY TABLE tmp_ticket_seed (
+    rn INT PRIMARY KEY,
+    MaVe INT NOT NULL,
+    GiaVe DECIMAL(18,2) NOT NULL
+) ENGINE=Memory;
+
+SET @rn := 0;
+INSERT INTO tmp_ticket_seed (rn, MaVe, GiaVe)
+SELECT
+    (@rn := @rn + 1) AS rn,
+    v.MaVe,
+    v.GiaVe
+FROM Ve v
+JOIN SuatChieu sc ON sc.MaSuatChieu = v.MaSuatChieu
+WHERE v.TrangThaiVe = 'Chưa bán'
+  AND sc.NgayGioChieu <= NOW() + INTERVAL 1 DAY
+ORDER BY sc.NgayGioChieu, v.MaVe
+LIMIT 2500;
+
+DROP TEMPORARY TABLE IF EXISTS tmp_order_seed;
+CREATE TEMPORARY TABLE tmp_order_seed (
+    seed_idx INT PRIMARY KEY,
+    seed_code VARCHAR(30) NOT NULL,
+    MaKhachHang INT NOT NULL,
+    MaNhanVien INT NOT NULL,
+    MaKhuyenMai INT NULL,
+    NgayLap DATETIME NOT NULL,
+    TrangThaiDonHang VARCHAR(30) NOT NULL
+) ENGINE=Memory;
+
+INSERT INTO tmp_order_seed (seed_idx, seed_code, MaKhachHang, MaNhanVien, MaKhuyenMai, NgayLap, TrangThaiDonHang)
+SELECT
+    t.rn,
+    CONCAT('BULK_ORDER_', LPAD(t.rn, 6, '0')),
+    ((t.rn - 1) % (SELECT MAX(MaKhachHang) FROM KhachHang)) + 1,
+    ((t.rn - 1) % (SELECT MAX(MaNhanVien) FROM NhanVien)) + 1,
+    CASE WHEN t.rn % 4 = 0 THEN ((t.rn - 1) % (SELECT MAX(MaKhuyenMai) FROM KhuyenMai)) + 1 ELSE NULL END,
+    DATE_SUB(NOW(), INTERVAL (t.rn % 45) DAY) + INTERVAL (t.rn % 1440) MINUTE,
+    CASE
+        WHEN t.rn % 20 = 0 THEN 'Đã hủy'
+        WHEN t.rn % 8 = 0 THEN 'Chưa thanh toán'
+        ELSE 'Đã thanh toán'
+    END
+FROM tmp_ticket_seed t;
+
+INSERT INTO DonHang (MaKhachHang, MaNhanVien, MaKhuyenMai, NgayLap, TrangThaiDonHang, GhiChu)
+SELECT
+    os.MaKhachHang,
+    os.MaNhanVien,
+    os.MaKhuyenMai,
+    os.NgayLap,
+    os.TrangThaiDonHang,
+    os.seed_code
+FROM tmp_order_seed os;
+
+INSERT INTO ChiTietDonHangVe (MaDonHang, MaVe, DonGiaBan)
+SELECT
+    d.MaDonHang,
+    t.MaVe,
+    t.GiaVe
+FROM tmp_order_seed os
+JOIN DonHang d ON d.GhiChu = os.seed_code
+JOIN tmp_ticket_seed t ON t.rn = os.seed_idx;
+
+UPDATE Ve v
+JOIN ChiTietDonHangVe ct ON ct.MaVe = v.MaVe
+SET v.TrangThaiVe = 'Đã bán'
+WHERE v.TrangThaiVe = 'Chưa bán';
+
+-- 7) Chi tiết sản phẩm cho khoảng 60% đơn
+INSERT INTO ChiTietDonHangSanPham (MaDonHang, MaSanPham, SoLuong, DonGiaBan)
+SELECT
+    d.MaDonHang,
+    ((d.MaDonHang - 1) % (SELECT MAX(MaSanPham) FROM SanPham)) + 1,
+    ((d.MaDonHang - 1) % 3) + 1,
+    sp.DonGia
+FROM DonHang d
+JOIN SanPham sp ON sp.MaSanPham = ((d.MaDonHang - 1) % (SELECT MAX(MaSanPham) FROM SanPham)) + 1
+WHERE d.GhiChu LIKE 'BULK_ORDER_%'
+  AND (d.MaDonHang % 10) < 6;
+
+-- 8) Thanh toán cho đơn đã thanh toán
+INSERT INTO ThanhToan (MaDonHang, SoTien, PhuongThucThanhToan, ThoiGianThanhToan, TrangThaiThanhToan)
+SELECT
+    d.MaDonHang,
+    COALESCE(vt.tong_ve, 0) + COALESCE(st.tong_sp, 0),
+    ELT((d.MaDonHang % 3) + 1, 'Tiền mặt', 'Chuyển khoản', 'Ví điện tử'),
+    DATE_ADD(d.NgayLap, INTERVAL 8 MINUTE),
+    'Thành công'
+FROM DonHang d
+LEFT JOIN (
+    SELECT MaDonHang, SUM(DonGiaBan) AS tong_ve
+    FROM ChiTietDonHangVe
+    GROUP BY MaDonHang
+) vt ON vt.MaDonHang = d.MaDonHang
+LEFT JOIN (
+    SELECT MaDonHang, SUM(SoLuong * DonGiaBan) AS tong_sp
+    FROM ChiTietDonHangSanPham
+    GROUP BY MaDonHang
+) st ON st.MaDonHang = d.MaDonHang
+LEFT JOIN ThanhToan tt ON tt.MaDonHang = d.MaDonHang
+WHERE d.TrangThaiDonHang = 'Đã thanh toán'
+  AND tt.MaThanhToan IS NULL;
+
+DROP TEMPORARY TABLE IF EXISTS tmp_order_seed;
+DROP TEMPORARY TABLE IF EXISTS tmp_ticket_seed;
+
+SELECT 'Schema + LARGE realistic seed completed' AS message;

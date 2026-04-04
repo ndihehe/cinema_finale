@@ -1,5 +1,10 @@
 package org.example.cinema_finale.service;
 
+import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.example.cinema_finale.dao.LoaiVeDao;
 import org.example.cinema_finale.dao.SuatChieuDao;
 import org.example.cinema_finale.dao.VeDao;
@@ -12,11 +17,6 @@ import org.example.cinema_finale.entity.PhongChieu;
 import org.example.cinema_finale.entity.SuatChieu;
 import org.example.cinema_finale.entity.Ve;
 import org.example.cinema_finale.util.AuthorizationUtil;
-
-import java.math.BigDecimal;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.stream.Collectors;
 
 public class VeService {
 
@@ -65,7 +65,7 @@ public class VeService {
     }
 
     public List<VeDTO> getByMaSuatChieu(String maSuatChieu) {
-        AuthorizationUtil.requireStaff();
+        AuthorizationUtil.requireStaffOrCustomer();
 
         Integer id = parseId(maSuatChieu);
         if (id == null) {
@@ -78,7 +78,7 @@ public class VeService {
     }
 
     public List<VeDTO> getAvailableByMaSuatChieu(String maSuatChieu) {
-        AuthorizationUtil.requireStaff();
+        AuthorizationUtil.requireStaffOrCustomer();
 
         Integer id = parseId(maSuatChieu);
         if (id == null) {
@@ -91,7 +91,7 @@ public class VeService {
     }
 
     public List<VeDTO> getByMaSuatChieuAndTrangThai(String maSuatChieu, Object trangThaiVe) {
-        AuthorizationUtil.requireStaff();
+        AuthorizationUtil.requireStaffOrCustomer();
 
         Integer id = parseId(maSuatChieu);
         String status = normalizeVeStatus(trangThaiVe);
@@ -300,7 +300,7 @@ public class VeService {
             if (isCreate) {
                 ve.setTrangThaiVe(STATUS_CHUA_BAN);
             } else {
-                ve.setTrangThaiVe(existing.getTrangThaiVe());
+                ve.setTrangThaiVe(existing != null ? existing.getTrangThaiVe() : STATUS_CHUA_BAN);
             }
         } else {
             String normalizedStatus = normalizeVeStatus(ve.getTrangThaiVe());
@@ -415,12 +415,18 @@ public class VeService {
 
         if (ve.getGheNgoi() != null) {
             dto.setMaGheNgoi(ve.getGheNgoi().getMaGheNgoi());
-            dto.setViTriGhe(readString(
-                    tryGet(ve.getGheNgoi(), "getSoGhe"),
-                    tryGet(ve.getGheNgoi(), "getTenGhe"),
-                    tryGet(ve.getGheNgoi(), "getViTriGhe"),
-                    tryGet(ve.getGheNgoi(), "getMaGheNgoi")
-            ));
+            String hang = readString(tryGet(ve.getGheNgoi(), "getHangGhe"));
+            String so = readString(tryGet(ve.getGheNgoi(), "getSoGhe"));
+            if (hang != null && so != null) {
+                dto.setViTriGhe(hang.trim().toUpperCase() + so.trim());
+            } else {
+                dto.setViTriGhe(readString(
+                        tryGet(ve.getGheNgoi(), "getSoGhe"),
+                        tryGet(ve.getGheNgoi(), "getTenGhe"),
+                        tryGet(ve.getGheNgoi(), "getViTriGhe"),
+                        tryGet(ve.getGheNgoi(), "getMaGheNgoi")
+                ));
+            }
         }
 
         if (ve.getLoaiVe() != null) {
@@ -438,7 +444,7 @@ public class VeService {
     private Object tryGet(Object target, String methodName) {
         try {
             return target.getClass().getMethod(methodName).invoke(target);
-        } catch (Exception e) {
+        } catch (ReflectiveOperationException | RuntimeException e) {
             return null;
         }
     }
@@ -464,7 +470,7 @@ public class VeService {
             return null;
         }
         try {
-            return Integer.parseInt(value.trim());
+            return Integer.valueOf(value.trim());
         } catch (NumberFormatException e) {
             return null;
         }

@@ -1,11 +1,11 @@
 package org.example.cinema_finale.service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.example.cinema_finale.dao.PhimDao;
 import org.example.cinema_finale.dto.PhimDTO;
 import org.example.cinema_finale.entity.Phim;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 public class PhimService {
 
@@ -24,7 +24,8 @@ public class PhimService {
                 p.getGioiHanTuoi(),
                 p.getDinhDang(),
                 p.getNgayKhoiChieu(),
-                p.getTrangThaiPhim()
+            p.getTrangThaiPhim(),
+            p.getPosterUrl()
         );
     }
 
@@ -41,6 +42,7 @@ public class PhimService {
         p.setDinhDang(dto.getDinhDang());
         p.setNgayKhoiChieu(dto.getNgayKhoiChieu());
         p.setTrangThaiPhim(dto.getTrangThaiPhim());
+        p.setPosterUrl(dto.getPosterUrl());
         return p;
     }
 

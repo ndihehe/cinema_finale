@@ -1,5 +1,8 @@
 package org.example.cinema_finale.util;
 
+import java.text.Normalizer;
+import java.util.Locale;
+
 import org.example.cinema_finale.entity.TaiKhoan;
 import org.example.cinema_finale.enums.VaiTro;
 
@@ -33,12 +36,19 @@ public final class SessionManager {
             return null;
         }
 
+        if (currentTaiKhoan.getKhachHang() != null) {
+            return VaiTro.KHACH_HANG;
+        }
+        if (currentTaiKhoan.getNhanVien() != null) {
+            return VaiTro.NHAN_VIEN;
+        }
+
         String loaiTaiKhoan = currentTaiKhoan.getLoaiTaiKhoan();
         if (loaiTaiKhoan == null) {
             return null;
         }
 
-        String normalized = loaiTaiKhoan.trim().toLowerCase();
+        String normalized = normalizeRoleValue(loaiTaiKhoan);
         return switch (normalized) {
             case "nhanvien", "nhânviên", "nhan_vien", "staff" -> VaiTro.NHAN_VIEN;
             case "khachhang", "kháchhàng", "khach_hang", "customer", "user" -> VaiTro.KHACH_HANG;
@@ -74,6 +84,12 @@ public final class SessionManager {
      * Kiểm tra tài khoản hiện tại có vai trò nhân viên hay không.
      */
     public static boolean isStaff() {
+        if (currentTaiKhoan == null) {
+            return false;
+        }
+        if (currentTaiKhoan.getNhanVien() != null) {
+            return true;
+        }
         return getCurrentVaiTro() == VaiTro.NHAN_VIEN;
     }
 
@@ -81,6 +97,12 @@ public final class SessionManager {
      * Kiểm tra tài khoản hiện tại có vai trò khách hàng hay không.
      */
     public static boolean isCustomer() {
+        if (currentTaiKhoan == null) {
+            return false;
+        }
+        if (currentTaiKhoan.getKhachHang() != null) {
+            return true;
+        }
         return getCurrentVaiTro() == VaiTro.KHACH_HANG;
     }
 
@@ -89,5 +111,18 @@ public final class SessionManager {
      */
     public static boolean isUser() {
         return isCustomer();
+    }
+
+    private static String normalizeRoleValue(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        String noAccent = Normalizer.normalize(value, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "");
+
+        return noAccent
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]", "");
     }
 }

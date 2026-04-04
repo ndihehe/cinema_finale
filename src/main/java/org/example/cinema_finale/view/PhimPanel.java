@@ -17,6 +17,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.SwingConstants;
 
 import org.example.cinema_finale.tablemodel.PhimTableModel;
 import org.example.cinema_finale.util.AppTheme;
@@ -47,9 +48,12 @@ public class PhimPanel extends JPanel {
     public JButton btnAdd = new JButton("Thêm");
     public JButton btnUpdate = new JButton("Sửa");
     public JButton btnDelete = new JButton("Ngừng chiếu");
+    public JButton btnUploadPoster = new JButton("Upload poster");
+    public JButton btnClearPoster = new JButton("Xóa poster");
 
     public JTable table;
     public PhimTableModel tableModel;
+    public JLabel lblPosterPreview = new JLabel("Chưa có poster", SwingConstants.CENTER);
 
     public PhimPanel() {
 
@@ -87,7 +91,21 @@ public class PhimPanel extends JPanel {
         addField(form, gbc, y++, "Ngày chiếu", dateChooser);
         addField(form, gbc, y++, "Trạng thái", cboTrangThai);
 
-        add(form, BorderLayout.WEST);
+        JPanel posterBox = createPosterBox();
+
+        JPanel leftColumn = new JPanel(new BorderLayout(0, 10));
+        leftColumn.setBackground(AppTheme.BG_APP);
+        leftColumn.setPreferredSize(new Dimension(320, 0));
+
+        JScrollPane formScroll = new JScrollPane(form);
+        formScroll.setBorder(null);
+        formScroll.getViewport().setBackground(AppTheme.BG_APP);
+        formScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+
+        leftColumn.add(formScroll, BorderLayout.CENTER);
+        leftColumn.add(posterBox, BorderLayout.SOUTH);
+
+        add(leftColumn, BorderLayout.WEST);
 
         // ===== TABLE =====
         tableModel = new PhimTableModel(new ArrayList<>());
@@ -147,5 +165,29 @@ public class PhimPanel extends JPanel {
                 c.setForeground(AppTheme.TEXT_PRIMARY);
             }
         }
+
+        AppTheme.stylePrimaryButton(btnUploadPoster);
+        AppTheme.styleWarningButton(btnClearPoster);
+    }
+
+    private JPanel createPosterBox() {
+        JPanel posterPanel = new JPanel(new BorderLayout(8, 8));
+        AppTheme.styleTitledPanel(posterPanel, "Poster phim (khu upload)");
+        posterPanel.setPreferredSize(new Dimension(0, 240));
+
+        lblPosterPreview.setOpaque(true);
+        lblPosterPreview.setBackground(AppTheme.BG_INPUT);
+        lblPosterPreview.setForeground(AppTheme.TEXT_MUTED);
+        lblPosterPreview.setPreferredSize(new Dimension(280, 160));
+
+        JPanel actions = new JPanel();
+        actions.setBackground(AppTheme.BG_APP);
+        actions.add(btnUploadPoster);
+        actions.add(btnClearPoster);
+
+        posterPanel.add(lblPosterPreview, BorderLayout.CENTER);
+        posterPanel.add(actions, BorderLayout.SOUTH);
+
+        return posterPanel;
     }
 }
