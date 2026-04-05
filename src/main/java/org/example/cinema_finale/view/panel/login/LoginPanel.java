@@ -69,7 +69,7 @@ public class LoginPanel extends JPanel {
         c.gridx = 0;
 
         // Title
-        JLabel title = new JLabel("D-T-G Cinema", SwingConstants.CENTER);
+        JLabel title = new JLabel("Cinema Finale", SwingConstants.CENTER);
         title.setFont(new Font("SansSerif", Font.BOLD, 26));
         title.setForeground(new Color(240, 242, 245));
         title.setBorder(new EmptyBorder(6, 6, 4, 6));
