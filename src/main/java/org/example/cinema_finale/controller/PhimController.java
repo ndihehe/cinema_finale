@@ -232,6 +232,12 @@ public class PhimController {
     }
 
     private void refreshPosterPreview(String posterPath) {
+
+        System.out.println("posterPath = " + posterPath);
+        if (posterPath != null) {
+            System.out.println("exists = " + new File(posterPath).exists());
+        }
+
         if (posterPath == null || posterPath.isBlank()) {
             view.lblPosterPreview.setIcon(null);
             view.lblPosterPreview.setText("Chưa có poster");
@@ -255,6 +261,11 @@ public class PhimController {
 
         try {
             BufferedImage source = ImageIO.read(file);
+            System.out.println("source = " + source);
+            if (source != null) {
+                System.out.println("img width = " + source.getWidth());
+                System.out.println("img height = " + source.getHeight());
+            }
             if (source == null || source.getWidth() <= 0 || source.getHeight() <= 0) {
                 view.lblPosterPreview.setIcon(null);
                 view.lblPosterPreview.setText("Không đọc được poster");
