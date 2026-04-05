@@ -15,6 +15,7 @@ Hệ thống gồm 2 luồng chính:
 - MySQL
 
 ## 3. Cấu trúc project
+```text
 cinema_finale/
 ├─ src/
 │  ├─ main/
@@ -36,6 +37,7 @@ cinema_finale/
 ├─ README.md
 ├─ pom.xml
 └─ .gitignore
+```
 
 ## 4. Cách chạy project
 ### Bước 1: Tạo database
