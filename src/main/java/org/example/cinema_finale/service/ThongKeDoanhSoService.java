@@ -1,6 +1,7 @@
 package org.example.cinema_finale.service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -17,7 +18,7 @@ public class ThongKeDoanhSoService {
 
     private static final LocalDateTime MYSQL_SAFE_MIN_DATETIME = LocalDateTime.of(1970, 1, 1, 0, 0, 0);
 
-    private ThongKeDoanhSoDao dao = new ThongKeDoanhSoDao();
+    private final ThongKeDoanhSoDao dao = new ThongKeDoanhSoDao();
 
     // ================= THEO NGÀY =================
     public List<ThongKeDoanhSoDTO> thongKeTheoNgay(LocalDate fromDate, LocalDate toDate){
@@ -110,10 +111,39 @@ public class ThongKeDoanhSoService {
 
         List<Object[]> rows = dao.thongKeTheoPhimRaw(fromDate, toDate);
         Map<String, ThongKeDoanhSoDTO> map = new LinkedHashMap<>();
+        Map<Integer, BigDecimal> orderTicketRevenue = new LinkedHashMap<>();
+
+        for (Object[] row : rows) {
+            Integer maDonHang = toInteger(row[0]);
+            BigDecimal ticketRevenueByMovie = toBigDecimal(row[3]);
+            if (maDonHang == null) {
+                continue;
+            }
+            orderTicketRevenue.put(maDonHang,
+                    orderTicketRevenue.getOrDefault(maDonHang, BigDecimal.ZERO).add(ticketRevenueByMovie));
+        }
 
         for (Object[] row : rows){
-            String phim = row[0] == null ? "Không rõ" : row[0].toString();
-            BigDecimal donGiaBan = toBigDecimal(row[1]);
+            Integer maDonHang = toInteger(row[0]);
+            String phim = row[1] == null ? "Không rõ" : row[1].toString();
+            Integer soVeObj = toInteger(row[2]);
+            int soVe = soVeObj == null ? 0 : soVeObj;
+            BigDecimal doanhThuVeTheoPhim = toBigDecimal(row[3]);
+            BigDecimal tongTienSanPham = toBigDecimal(row[4]);
+            BigDecimal soTienThanhToan = toBigDecimal(row[5]);
+
+            BigDecimal tongTienVeDonHang = maDonHang == null
+                    ? BigDecimal.ZERO
+                    : orderTicketRevenue.getOrDefault(maDonHang, BigDecimal.ZERO);
+            BigDecimal tongTienTruocGiam = tongTienVeDonHang.add(tongTienSanPham);
+            BigDecimal giamGiaDonHang = tongTienTruocGiam.subtract(soTienThanhToan).max(BigDecimal.ZERO);
+
+            BigDecimal giamGiaTheoPhim = BigDecimal.ZERO;
+            if (giamGiaDonHang.compareTo(BigDecimal.ZERO) > 0 && tongTienVeDonHang.compareTo(BigDecimal.ZERO) > 0) {
+                giamGiaTheoPhim = giamGiaDonHang
+                        .multiply(doanhThuVeTheoPhim)
+                        .divide(tongTienVeDonHang, 2, java.math.RoundingMode.HALF_UP);
+            }
 
             map.putIfAbsent(phim,
                     new ThongKeDoanhSoDTO(phim,0,
@@ -121,9 +151,10 @@ public class ThongKeDoanhSoService {
 
             ThongKeDoanhSoDTO dto = map.get(phim);
 
-            dto.setSoLuongVeBan(dto.getSoLuongVeBan()+1);
-            dto.setTongDoanhThu(dto.getTongDoanhThu().add(donGiaBan));
-            dto.setDoanhThuThuan(dto.getTongDoanhThu());
+            dto.setSoLuongVeBan(dto.getSoLuongVeBan() + soVe);
+            dto.setTongDoanhThu(dto.getTongDoanhThu().add(doanhThuVeTheoPhim));
+            dto.setTongGiamGia(dto.getTongGiamGia().add(giamGiaTheoPhim));
+            dto.setDoanhThuThuan(dto.getTongDoanhThu().subtract(dto.getTongGiamGia()).max(BigDecimal.ZERO));
         }
 
         return new ArrayList<>(map.values());
@@ -140,7 +171,7 @@ public class ThongKeDoanhSoService {
                 : from.atStartOfDay();
 
         LocalDateTime toDate = (to == null)
-                ? LocalDateTime.now().plusDays(1)
+            ? LocalDateTime.now()
                 : to.plusDays(1).atStartOfDay();
 
         if (!fromDate.isBefore(toDate)) {
@@ -192,14 +223,42 @@ public class ThongKeDoanhSoService {
         }
 
         if (value instanceof BigDecimal bigDecimal) {
-            return bigDecimal;
+            return normalizeMoney(bigDecimal);
         }
 
         if (value instanceof Number number) {
-            return BigDecimal.valueOf(number.doubleValue());
+            return normalizeMoney(new BigDecimal(number.toString()));
         }
 
         return BigDecimal.ZERO;
+    }
+
+    private BigDecimal normalizeMoney(BigDecimal value) {
+        if (value == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal normalized = value.setScale(2, RoundingMode.HALF_UP);
+        if (normalized.abs().compareTo(new BigDecimal("0.005")) < 0) {
+            return BigDecimal.ZERO;
+        }
+        return normalized;
+    }
+
+    private Integer toInteger(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Integer integer) {
+            return integer;
+        }
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        try {
+            return Integer.valueOf(value.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private LocalDateTime toLocalDateTime(Object value) {

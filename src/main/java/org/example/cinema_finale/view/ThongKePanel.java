@@ -10,6 +10,7 @@ import java.awt.GridLayout;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.math.BigDecimal;
+import java.text.DecimalFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ import org.example.cinema_finale.util.AppTheme;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.data.category.DefaultCategoryDataset;
@@ -287,6 +289,10 @@ public class ThongKePanel extends JPanel {
         plot.getDomainAxis().setTickLabelPaint(AppTheme.TEXT_MUTED);
         plot.getRenderer().setSeriesPaint(0, new Color(59, 130, 246));
         plot.setRangeGridlinePaint(new Color(74, 85, 104));
+
+        NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+        rangeAxis.setNumberFormatOverride(new DecimalFormat("#,##0"));
+        rangeAxis.setAutoRangeIncludesZero(true);
     }
 
     private ImageIcon loadScaledPoster(String posterPath, int width, int height) {

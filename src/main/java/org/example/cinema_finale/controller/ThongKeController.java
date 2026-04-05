@@ -57,7 +57,8 @@ public class ThongKeController {
     private void loadPhim() {
         revenueByMovie.clear();
         for (ThongKeDoanhSoDTO stat : service.thongKeTheoPhim(null, null)) {
-            revenueByMovie.put(stat.getNhanThongKe(), stat.getTongDoanhThu());
+            String key = normalizeMovieKey(stat.getNhanThongKe());
+            revenueByMovie.put(key, revenueByMovie.getOrDefault(key, BigDecimal.ZERO).add(stat.getTongDoanhThu()));
         }
 
         List<MovieCardData> cards = phimService.getAllPhim().stream()
@@ -84,7 +85,7 @@ public class ThongKeController {
         List<MovieCardData> filtered = allMovieCards.stream()
                 .filter(c -> keyword.isEmpty() || c.movieName().toLowerCase().contains(keyword))
                 .filter(c -> {
-                    BigDecimal revenue = revenueByMovie.getOrDefault(c.movieName(), BigDecimal.ZERO);
+                    BigDecimal revenue = revenueByMovie.getOrDefault(normalizeMovieKey(c.movieName()), BigDecimal.ZERO);
                     if ("Phim có doanh thu".equals(filterType)) {
                         return revenue.compareTo(BigDecimal.ZERO) > 0;
                     }
@@ -101,8 +102,9 @@ public class ThongKeController {
     }
 
     private void handleMovieSelected(MovieCardData movie) {
+        String selectedMovieKey = normalizeMovieKey(movie.movieName());
         List<ThongKeDoanhSoDTO> movieStats = service.thongKeTheoPhim(null, null).stream()
-                .filter(t -> t.getNhanThongKe().equals(movie.movieName()))
+            .filter(t -> normalizeMovieKey(t.getNhanThongKe()).equals(selectedMovieKey))
                 .toList();
 
         int soVe = 0;
@@ -119,5 +121,12 @@ public class ThongKeController {
 
         Map<String, BigDecimal> revenueByWeekday = service.thongKeDoanhThuTheoThuTrongTuan(movie.movieName(), null, null);
         view.renderRevenueChart(movie.movieName(), revenueByWeekday);
+    }
+
+    private String normalizeMovieKey(String name) {
+        if (name == null) {
+            return "";
+        }
+        return name.trim().replaceAll("\\s+", " ").toLowerCase();
     }
 }

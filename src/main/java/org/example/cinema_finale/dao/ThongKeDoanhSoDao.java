@@ -43,13 +43,15 @@ public class ThongKeDoanhSoDao {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             TypedQuery<Object[]> query = em.createQuery(
-                    "select p.tenPhim, ct.donGiaBan " +
-                            "from ChiTietDonHangVe ct " +
-                            "join ct.donHang dh " +
-                            "join dh.thanhToans tt " +
-                            "join ct.ve v " +
-                            "join v.suatChieu sc " +
-                            "join sc.phim p " +
+                "select dh.maDonHang, p.tenPhim, count(ct), coalesce(sum(ct.donGiaBan), 0), " +
+                    "coalesce((select sum(csp.donGiaBan * csp.soLuong) from ChiTietDonHangSanPham csp where csp.donHang = dh), 0), " +
+                    "tt.soTien " +
+                    "from ChiTietDonHangVe ct " +
+                    "join ct.donHang dh " +
+                    "join dh.thanhToans tt " +
+                    "join ct.ve v " +
+                    "join v.suatChieu sc " +
+                    "join sc.phim p " +
                     "where tt.trangThaiThanhToan IN " + SUCCESS_PAYMENT_STATUSES + " " +
                             "and tt.thoiGianThanhToan >= :from " +
                     "and tt.thoiGianThanhToan < :to " +
@@ -59,17 +61,16 @@ public class ThongKeDoanhSoDao {
                     "   where t2.donHang = dh " +
                     "   and t2.trangThaiThanhToan IN " + SUCCESS_PAYMENT_STATUSES + " " +
                     "   and t2.thoiGianThanhToan >= :from " +
-                    "   and t2.thoiGianThanhToan < :to" +
-                    ")",
+                        "   and t2.thoiGianThanhToan < :to" +
+                        ") " +
+                        "group by dh.maDonHang, p.tenPhim, tt.soTien",
                     Object[].class
             );
 
             query.setParameter("from", from);
             query.setParameter("to", to);
 
-            List<Object[]> result = query.getResultList();
-            System.out.println("DEBUG ThongKe phim rows = " + result.size());
-            return result;
+            return query.getResultList();
         } finally {
             em.close();
         }
@@ -141,6 +142,8 @@ public class ThongKeDoanhSoDao {
     public List<Object[]> thongKeTheoPhimVaThoiGianRaw(String tenPhim, LocalDateTime from, LocalDateTime to) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
+            String tenPhimNormalized = tenPhim == null ? "" : tenPhim.trim().toLowerCase();
+
             TypedQuery<Object[]> query = em.createQuery(
                     "select tt.thoiGianThanhToan, ct.donGiaBan " +
                     "from ChiTietDonHangVe ct " +
@@ -149,7 +152,7 @@ public class ThongKeDoanhSoDao {
                     "join ct.ve v " +
                     "join v.suatChieu sc " +
                     "join sc.phim p " +
-                    "where p.tenPhim = :tenPhim " +
+                    "where lower(trim(p.tenPhim)) = :tenPhim " +
                     "and tt.trangThaiThanhToan IN " + SUCCESS_PAYMENT_STATUSES + " " +
                     "and tt.thoiGianThanhToan >= :from " +
                     "and tt.thoiGianThanhToan < :to " +
@@ -164,7 +167,7 @@ public class ThongKeDoanhSoDao {
                     Object[].class
             );
 
-            query.setParameter("tenPhim", tenPhim);
+            query.setParameter("tenPhim", tenPhimNormalized);
             query.setParameter("from", from);
             query.setParameter("to", to);
 
