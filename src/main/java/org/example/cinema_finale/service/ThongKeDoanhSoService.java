@@ -1,6 +1,8 @@
 package org.example.cinema_finale.service;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -32,7 +34,10 @@ public class ThongKeDoanhSoService {
         Map<String, ThongKeDoanhSoDTO> map = new LinkedHashMap<>();
 
         for (Object[] row : rows){
-            LocalDateTime thoiGianThanhToan = (LocalDateTime) row[1];
+            LocalDateTime thoiGianThanhToan = toLocalDateTime(row[0]);
+            if (thoiGianThanhToan == null) {
+                continue;
+            }
             BigDecimal doanhThu = toBigDecimal(row[1]);
 
             String ngay = thoiGianThanhToan.toLocalDate().toString();
@@ -66,7 +71,10 @@ public class ThongKeDoanhSoService {
         Map<Integer, ThongKeDoanhSoDTO> map = new LinkedHashMap<>();
 
         for (Object[] row : rows){
-            LocalDateTime thoiGianThanhToan = (LocalDateTime) row[1];
+            LocalDateTime thoiGianThanhToan = toLocalDateTime(row[0]);
+            if (thoiGianThanhToan == null) {
+                continue;
+            }
             BigDecimal doanhThu = toBigDecimal(row[1]);
 
             int month = thoiGianThanhToan.getMonthValue();
@@ -121,6 +129,63 @@ public class ThongKeDoanhSoService {
         return new ArrayList<>(map.values());
     }
 
+    public Map<String, BigDecimal> thongKeDoanhThuTheoThuTrongTuan(String tenPhim, LocalDate from, LocalDate to) {
+        Map<String, BigDecimal> result = initWeekdayMap();
+        if (tenPhim == null || tenPhim.isBlank()) {
+            return result;
+        }
+
+        LocalDateTime fromDate = (from == null)
+                ? MYSQL_SAFE_MIN_DATETIME
+                : from.atStartOfDay();
+
+        LocalDateTime toDate = (to == null)
+                ? LocalDateTime.now().plusDays(1)
+                : to.plusDays(1).atStartOfDay();
+
+        if (!fromDate.isBefore(toDate)) {
+            return result;
+        }
+
+        List<Object[]> rows = dao.thongKeTheoPhimVaThoiGianRaw(tenPhim, fromDate, toDate);
+        for (Object[] row : rows) {
+            LocalDateTime paidAt = toLocalDateTime(row[0]);
+            if (paidAt == null) {
+                continue;
+            }
+
+            String weekday = toVnWeekday(paidAt.getDayOfWeek());
+            BigDecimal value = toBigDecimal(row[1]);
+            result.put(weekday, result.get(weekday).add(value));
+        }
+
+        return result;
+    }
+
+    private Map<String, BigDecimal> initWeekdayMap() {
+        Map<String, BigDecimal> map = new LinkedHashMap<>();
+        map.put("Thứ 2", BigDecimal.ZERO);
+        map.put("Thứ 3", BigDecimal.ZERO);
+        map.put("Thứ 4", BigDecimal.ZERO);
+        map.put("Thứ 5", BigDecimal.ZERO);
+        map.put("Thứ 6", BigDecimal.ZERO);
+        map.put("Thứ 7", BigDecimal.ZERO);
+        map.put("CN", BigDecimal.ZERO);
+        return map;
+    }
+
+    private String toVnWeekday(DayOfWeek dayOfWeek) {
+        return switch (dayOfWeek) {
+            case MONDAY -> "Thứ 2";
+            case TUESDAY -> "Thứ 3";
+            case WEDNESDAY -> "Thứ 4";
+            case THURSDAY -> "Thứ 5";
+            case FRIDAY -> "Thứ 6";
+            case SATURDAY -> "Thứ 7";
+            case SUNDAY -> "CN";
+        };
+    }
+
     private BigDecimal toBigDecimal(Object value) {
         if (value == null) {
             return BigDecimal.ZERO;
@@ -135,5 +200,25 @@ public class ThongKeDoanhSoService {
         }
 
         return BigDecimal.ZERO;
+    }
+
+    private LocalDateTime toLocalDateTime(Object value) {
+        if (value == null) {
+            return null;
+        }
+
+        if (value instanceof LocalDateTime localDateTime) {
+            return localDateTime;
+        }
+
+        if (value instanceof Timestamp timestamp) {
+            return timestamp.toLocalDateTime();
+        }
+
+        if (value instanceof java.util.Date date) {
+            return LocalDateTime.ofInstant(date.toInstant(), java.time.ZoneId.systemDefault());
+        }
+
+        return null;
     }
 }

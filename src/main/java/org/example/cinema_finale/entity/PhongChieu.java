@@ -89,4 +89,22 @@ public class PhongChieu {
     public void setDanhSachSuatChieu(List<SuatChieu> danhSachSuatChieu) {
         this.danhSachSuatChieu = danhSachSuatChieu;
     }
+
+    @Override
+    public String toString() {
+        return tenPhongChieu != null ? tenPhongChieu : "Phòng " + maPhongChieu;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof PhongChieu)) return false;
+        PhongChieu p = (PhongChieu) o;
+        return maPhongChieu != null && maPhongChieu.equals(p.maPhongChieu);
+    }
+
+    @Override
+    public int hashCode() {
+        return maPhongChieu != null ? maPhongChieu.hashCode() : 0;
+    }
 }

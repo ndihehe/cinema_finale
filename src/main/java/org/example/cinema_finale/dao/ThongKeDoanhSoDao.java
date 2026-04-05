@@ -137,4 +137,40 @@ public class ThongKeDoanhSoDao {
             em.close();
         }
     }
+
+    public List<Object[]> thongKeTheoPhimVaThoiGianRaw(String tenPhim, LocalDateTime from, LocalDateTime to) {
+        EntityManager em = JpaUtil.getEntityManager();
+        try {
+            TypedQuery<Object[]> query = em.createQuery(
+                    "select tt.thoiGianThanhToan, ct.donGiaBan " +
+                    "from ChiTietDonHangVe ct " +
+                    "join ct.donHang dh " +
+                    "join dh.thanhToans tt " +
+                    "join ct.ve v " +
+                    "join v.suatChieu sc " +
+                    "join sc.phim p " +
+                    "where p.tenPhim = :tenPhim " +
+                    "and tt.trangThaiThanhToan IN " + SUCCESS_PAYMENT_STATUSES + " " +
+                    "and tt.thoiGianThanhToan >= :from " +
+                    "and tt.thoiGianThanhToan < :to " +
+                    "and tt.maThanhToan = (" +
+                    "   select max(t2.maThanhToan) " +
+                    "   from ThanhToan t2 " +
+                    "   where t2.donHang = dh " +
+                    "   and t2.trangThaiThanhToan IN " + SUCCESS_PAYMENT_STATUSES + " " +
+                    "   and t2.thoiGianThanhToan >= :from " +
+                    "   and t2.thoiGianThanhToan < :to" +
+                    ")",
+                    Object[].class
+            );
+
+            query.setParameter("tenPhim", tenPhim);
+            query.setParameter("from", from);
+            query.setParameter("to", to);
+
+            return query.getResultList();
+        } finally {
+            em.close();
+        }
+    }
 }

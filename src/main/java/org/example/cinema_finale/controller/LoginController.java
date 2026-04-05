@@ -1,13 +1,16 @@
 package org.example.cinema_finale.controller;
 
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
+
+import org.example.cinema_finale.controller.user.UserBookingController;
 import org.example.cinema_finale.dto.LoginDTO;
 import org.example.cinema_finale.dto.LoginResultDTO;
 import org.example.cinema_finale.service.AuthService;
 import org.example.cinema_finale.view.frame.LoginFrame;
 import org.example.cinema_finale.view.frame.StaffMainFrame;
 import org.example.cinema_finale.view.panel.login.LoginPanel;
-
-import javax.swing.*;
+import org.example.cinema_finale.view.user.UserFrame;
 
 public class LoginController {
 
@@ -39,7 +42,9 @@ public class LoginController {
             return;
         }
 
-        if ("NhanVien".equalsIgnoreCase(result.getRole())) {
+        String role = result.getRole() == null ? "" : result.getRole().trim();
+
+        if ("NhanVien".equalsIgnoreCase(role)) {
             frame.dispose();
             SwingUtilities.invokeLater(() -> {
                 StaffMainFrame staffMainFrame = new StaffMainFrame(
@@ -50,11 +55,22 @@ public class LoginController {
             return;
         }
 
+        if ("KhachHang".equalsIgnoreCase(role)
+                || "Khach_Hang".equalsIgnoreCase(role)
+                || "Customer".equalsIgnoreCase(role)
+                || "User".equalsIgnoreCase(role)) {
+            frame.dispose();
+            SwingUtilities.invokeLater(() -> {
+                UserFrame userFrame = new UserFrame();
+                UserBookingController controller = new UserBookingController(userFrame);
+                userFrame.getRootPane().putClientProperty(UserBookingController.class.getName(), controller);
+                userFrame.setVisible(true);
+            });
+            return;
+        }
+
         authService.logout();
-        panel.showMessage(
-                "Tài khoản này chưa được chuyển vào màn hình khách hàng.",
-                "Chưa hỗ trợ",
-                JOptionPane.INFORMATION_MESSAGE
-        );
+        panel.showMessage("Vai trò tài khoản không được hỗ trợ: " + role,
+                "Đăng nhập thất bại", JOptionPane.ERROR_MESSAGE);
     }
 }

@@ -1,9 +1,16 @@
 package org.example.cinema_finale.entity;
 
-import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "Phim")
@@ -37,6 +44,9 @@ public class Phim {
 
     @Column(name = "TrangThaiPhim", nullable = false, length = 30)
     private String trangThaiPhim = "Sắp chiếu";
+
+    @Column(name = "PosterUrl", length = 500)
+    private String posterUrl;
 
     @OneToMany(mappedBy = "phim")
     private List<SuatChieu> danhSachSuatChieu = new ArrayList<>();
@@ -114,6 +124,14 @@ public class Phim {
 
     public void setTrangThaiPhim(String trangThaiPhim) {
         this.trangThaiPhim = trangThaiPhim;
+    }
+
+    public String getPosterUrl() {
+        return posterUrl;
+    }
+
+    public void setPosterUrl(String posterUrl) {
+        this.posterUrl = posterUrl;
     }
 
     public List<SuatChieu> getDanhSachSuatChieu() {

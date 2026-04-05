@@ -3,24 +3,23 @@ package org.example.cinema_finale.view.frame;
 import javax.swing.JFrame;
 
 import org.example.cinema_finale.controller.LoginController;
-import org.example.cinema_finale.util.AppTheme;
-import org.example.cinema_finale.view.panel.login.LoginPanel;
 
 public class LoginFrame extends JFrame {
 
     public LoginFrame() {
         setTitle("Cinema Finale - Đăng nhập");
-        setSize(640, 360);
-        setMinimumSize(new java.awt.Dimension(620, 340));
+        setSize(1000, 620);
+        setMinimumSize(new java.awt.Dimension(900, 560));
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
-        getContentPane().setBackground(AppTheme.BG_APP);
 
-        LoginPanel loginPanel = new LoginPanel();
-        setContentPane(loginPanel);
-        getContentPane().setBackground(AppTheme.BG_APP);
+        // Build background panel that paints cinematic image and centers the login form
+        org.example.cinema_finale.view.panel.login.LoginPanel loginPanel = new org.example.cinema_finale.view.panel.login.LoginPanel();
+        org.example.cinema_finale.view.panel.login.BackgroundPanel background = new org.example.cinema_finale.view.panel.login.BackgroundPanel(loginPanel, "/images/login/login_background.jpg");
+        setContentPane(background);
 
+        // keep existing login flow wiring
         new LoginController(this, loginPanel);
     }
 }

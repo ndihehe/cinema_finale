@@ -41,6 +41,17 @@ public final class AuthorizationUtil {
     }
 
     /**
+     * Yêu cầu tài khoản hiện tại là nhân viên hoặc khách hàng.
+     */
+    public static void requireStaffOrCustomer() {
+        requireLogin();
+
+        if (!SessionManager.isStaff() && !SessionManager.isCustomer()) {
+            throw new SecurityException("Bạn không có quyền thực hiện chức năng này.");
+        }
+    }
+
+    /**
      * Giữ lại để tương thích với code cũ.
      */
     public static void requireUser() {

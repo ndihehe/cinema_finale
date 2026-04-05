@@ -1,108 +1,123 @@
 package org.example.cinema_finale.controller;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
-import javax.swing.JOptionPane;
-
-import org.example.cinema_finale.dto.PhimDTO;
 import org.example.cinema_finale.dto.ThongKeDoanhSoDTO;
 import org.example.cinema_finale.service.PhimService;
 import org.example.cinema_finale.service.ThongKeDoanhSoService;
 import org.example.cinema_finale.util.DataSyncEventBus;
 import org.example.cinema_finale.view.ThongKePanel;
+import org.example.cinema_finale.view.ThongKePanel.MovieCardData;
 
 public class ThongKeController {
 
-    private ThongKePanel view;
-    private ThongKeDoanhSoService service = new ThongKeDoanhSoService();
-    private List<ThongKeDoanhSoDTO> cachedMovieStats = List.of();
+    private final ThongKePanel view;
+    private final ThongKeDoanhSoService service = new ThongKeDoanhSoService();
+    private final PhimService phimService = new PhimService();
+    private final List<MovieCardData> allMovieCards = new ArrayList<>();
+    private final Map<String, BigDecimal> revenueByMovie = new LinkedHashMap<>();
 
     public ThongKeController(ThongKePanel view) {
         this.view = view;
 
         init();
         loadPhim();
-        autoLoad();
+        view.showPlaceholder();
+
         DataSyncEventBus.onPhimChanged(this::loadPhim);
     }
 
-    private void init(){
+    private void init() {
+        view.setMovieSelectionListener(this::handleMovieSelected);
 
-        // ===== THEO NGÀY =====
-        view.btnNgay.addActionListener(e -> {
-            if(view.dateFromNgay.getDate()==null || view.dateToNgay.getDate()==null){
-                JOptionPane.showMessageDialog(view,"Chọn ngày!");
-                return;
+        view.txtMovieSearch.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                applyMovieFilter();
             }
 
-            update(service.thongKeTheoNgay(
-                    get(view.dateFromNgay),
-                    get(view.dateToNgay)
-            ));
+            @Override
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                applyMovieFilter();
+            }
+
+            @Override
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                applyMovieFilter();
+            }
         });
 
-        view.cboPhim.addActionListener(e -> applyMovieFilter());
+        view.cboRevenueFilter.addActionListener(e -> applyMovieFilter());
     }
 
-    private LocalDate get(com.toedter.calendar.JDateChooser d){
-        return d.getDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-    }
-
-    private void loadPhim(){
-        List<PhimDTO> list = new PhimService().getAllPhim();
-        Object selected = view.cboPhim.getSelectedItem();
-
-        view.cboPhim.removeAllItems();
-
-        for(PhimDTO p: list){
-            view.cboPhim.addItem(p.getTenPhim());
+    private void loadPhim() {
+        revenueByMovie.clear();
+        for (ThongKeDoanhSoDTO stat : service.thongKeTheoPhim(null, null)) {
+            revenueByMovie.put(stat.getNhanThongKe(), stat.getTongDoanhThu());
         }
 
-        if (selected != null) {
-            view.cboPhim.setSelectedItem(selected.toString());
-        }
+        List<MovieCardData> cards = phimService.getAllPhim().stream()
+                .map(p -> new MovieCardData(p.getTenPhim(), p.getPosterUrl()))
+                .toList();
 
-        cachedMovieStats = service.thongKeTheoPhim(null, null);
+        allMovieCards.clear();
+        allMovieCards.addAll(cards);
+
         applyMovieFilter();
-    }
 
-    private void autoLoad(){
-        update(service.thongKeTheoNgay(LocalDate.now(), LocalDate.now()));
-    }
-
-    private void update(List<ThongKeDoanhSoDTO> list){
-
-        view.tableModel.setData(list);
-
-        int ve = 0;
-        BigDecimal doanh = BigDecimal.ZERO;
-        BigDecimal giam = BigDecimal.ZERO;
-
-        for(var t:list){
-            ve += t.getSoLuongVeBan();
-            doanh = doanh.add(t.getTongDoanhThu());
-            giam = giam.add(t.getTongGiamGia());
+        if (allMovieCards.isEmpty()) {
+            view.updateSummary(0, BigDecimal.ZERO, BigDecimal.ZERO);
+            view.showPlaceholder();
         }
-
-        view.lblVe.setText(String.valueOf(ve));
-        view.lblDoanhThu.setText(String.format("%,d đ", doanh.longValue()));
-        view.lblGiamGia.setText(String.format("%,d đ", giam.longValue()));
     }
 
     private void applyMovieFilter() {
-        if (view.cboPhim.getSelectedItem() == null) {
-            update(cachedMovieStats);
-            return;
-        }
+        String keyword = view.txtMovieSearch.getText() == null ? "" : view.txtMovieSearch.getText().trim().toLowerCase();
+        String filterType = view.cboRevenueFilter.getSelectedItem() == null
+                ? "Tất cả phim"
+                : view.cboRevenueFilter.getSelectedItem().toString();
 
-        String phim = view.cboPhim.getSelectedItem().toString();
-        List<ThongKeDoanhSoDTO> filtered = cachedMovieStats.stream()
-                .filter(t -> t.getNhanThongKe().equals(phim))
+        List<MovieCardData> filtered = allMovieCards.stream()
+                .filter(c -> keyword.isEmpty() || c.movieName().toLowerCase().contains(keyword))
+                .filter(c -> {
+                    BigDecimal revenue = revenueByMovie.getOrDefault(c.movieName(), BigDecimal.ZERO);
+                    if ("Phim có doanh thu".equals(filterType)) {
+                        return revenue.compareTo(BigDecimal.ZERO) > 0;
+                    }
+                    if ("Phim chưa có doanh thu".equals(filterType)) {
+                        return revenue.compareTo(BigDecimal.ZERO) <= 0;
+                    }
+                    return true;
+                })
                 .toList();
 
-        update(filtered);
+        view.setMovieCards(filtered);
+        view.showPlaceholder();
+        view.updateSummary(0, BigDecimal.ZERO, BigDecimal.ZERO);
+    }
+
+    private void handleMovieSelected(MovieCardData movie) {
+        List<ThongKeDoanhSoDTO> movieStats = service.thongKeTheoPhim(null, null).stream()
+                .filter(t -> t.getNhanThongKe().equals(movie.movieName()))
+                .toList();
+
+        int soVe = 0;
+        BigDecimal doanhThu = BigDecimal.ZERO;
+        BigDecimal giamGia = BigDecimal.ZERO;
+
+        for (ThongKeDoanhSoDTO stat : movieStats) {
+            soVe += stat.getSoLuongVeBan();
+            doanhThu = doanhThu.add(stat.getTongDoanhThu());
+            giamGia = giamGia.add(stat.getTongGiamGia());
+        }
+
+        view.updateSummary(soVe, doanhThu, giamGia);
+
+        Map<String, BigDecimal> revenueByWeekday = service.thongKeDoanhThuTheoThuTrongTuan(movie.movieName(), null, null);
+        view.renderRevenueChart(movie.movieName(), revenueByWeekday);
     }
 }
