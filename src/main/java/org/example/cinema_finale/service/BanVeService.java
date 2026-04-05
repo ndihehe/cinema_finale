@@ -198,16 +198,20 @@ public class BanVeService {
                     if (item == null || isBlank(item.tenSanPham()) || item.soLuong() == null || item.soLuong() <= 0) {
                         continue;
                     }
+                    System.out.println("DEBUG UI: [" + item.tenSanPham() + "] - Độ dài: " + item.tenSanPham().length());
 
+                    // Sử dụng REPLACE để loại bỏ tất cả khoảng trắng khi so sánh
+                    // Sửa trong BanVeService.java
                     SanPham sanPham = em.createQuery(
-                                    "SELECT sp FROM SanPham sp WHERE sp.tenSanPham = :tenSanPham",
-                                    SanPham.class
-                            ).setParameter("tenSanPham", item.tenSanPham().trim())
-                            .setLockMode(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
-                            .getResultStream()
-                            .findFirst()
-                            .orElse(null);
-
+                            "SELECT sp FROM SanPham sp WHERE REPLACE(sp.tenSanPham, ' ', '') LIKE REPLACE(:tenSanPham, ' ', '')", 
+                            SanPham.class
+                        )
+                        .setParameter("tenSanPham", "%" + item.tenSanPham().trim() + "%") // Thêm % ở hai đầu
+                        .setLockMode(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+                        .getResultStream()
+                        .findFirst()
+                        .orElse(null);
+ 
                     if (sanPham == null) {
                         return rollbackAndReturn(tx, "Sản phẩm không tồn tại: " + item.tenSanPham());
                     }

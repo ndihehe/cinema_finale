@@ -1,7 +1,12 @@
 package org.example.cinema_finale.service;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityTransaction;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+
 import org.example.cinema_finale.dao.ChiTietDonHangVeDao;
 import org.example.cinema_finale.dao.DonHangDao;
 import org.example.cinema_finale.dao.ThanhToanDao;
@@ -14,21 +19,18 @@ import org.example.cinema_finale.entity.ThanhToan;
 import org.example.cinema_finale.util.AuthorizationUtil;
 import org.example.cinema_finale.util.JpaUtil;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityTransaction;
 
 public class ThanhToanService {
 
     private static final String STATUS_THANH_CONG = "Thành công";
     private static final String STATUS_THAT_BAI = "Thất bại";
-    private static final String ORDER_CHUA_THANH_TOAN = "Chưa thanh toán";
     private static final String ORDER_DA_THANH_TOAN = "Đã thanh toán";
     private static final String ORDER_DA_HUY = "Đã hủy";
     private static final String VE_DA_BAN = "Đã bán";
     private static final String VE_DA_HUY = "Đã hủy";
-
+    private static final Logger LOG = Logger.getLogger(ThanhToanService.class.getName());
     private final ThanhToanDao thanhToanDao;
     private final DonHangDao donHangDao;
     private final ChiTietDonHangVeDao chiTietDonHangVeDao;
@@ -201,7 +203,7 @@ public class ThanhToanService {
             if (tx.isActive()) {
                 tx.rollback();
             }
-            e.printStackTrace();
+            LOG.log(Level.SEVERE, "Xác nhận thanh toán lỗi giao dịch", e);
             return "Xác nhận thanh toán thất bại do lỗi giao dịch.";
         } finally {
             em.close();
@@ -282,7 +284,7 @@ public class ThanhToanService {
             if (tx.isActive()) {
                 tx.rollback();
             }
-            e.printStackTrace();
+            LOG.log(Level.SEVERE, "Hoàn tiền lỗi giao dịch", e);
             return "Hoàn tiền thất bại do lỗi giao dịch.";
         } finally {
             em.close();
