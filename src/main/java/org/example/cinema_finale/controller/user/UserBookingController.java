@@ -26,6 +26,7 @@ import org.example.cinema_finale.dto.VeDTO;
 import org.example.cinema_finale.service.BanVeService;
 import org.example.cinema_finale.service.KhuyenMaiService;
 import org.example.cinema_finale.service.PhimService;
+import org.example.cinema_finale.service.SanPhamService;
 import org.example.cinema_finale.service.SuatChieuService;
 import org.example.cinema_finale.util.SessionManager;
 import org.example.cinema_finale.view.frame.LoginFrame;
@@ -43,6 +44,7 @@ public class UserBookingController {
     private final SuatChieuService suatChieuService = new SuatChieuService();
     private final BanVeService banVeService = new BanVeService();
     private final KhuyenMaiService khuyenMaiService = new KhuyenMaiService();
+    private final SanPhamService sanPhamService = new SanPhamService();
 
     private List<PhimDTO> allMovies = new ArrayList<>();
     private List<SuatChieuDTO> currentShowtimes = new ArrayList<>();
@@ -135,8 +137,18 @@ public class UserBookingController {
 
     private void onTicketsSelected(List<VeDTO> tickets) {
         this.selectedTickets = new ArrayList<>(tickets);
+        loadProductsForSelection();
         view.getProductSelectionPanel().setTicketSelection(selectedTickets);
         view.showStep(UserFrame.STEP_PRODUCTS);
+    }
+
+    private void loadProductsForSelection() {
+        try {
+            view.getProductSelectionPanel().setProducts(sanPhamService.getSanPhamDangBan());
+        } catch (RuntimeException ex) {
+            view.getProductSelectionPanel().setProducts(List.of());
+            showErrorWithAuthHint("Không tải được danh sách sản phẩm", ex);
+        }
     }
 
     private void onProductsSelected(ProductSelectionResult result) {
@@ -359,6 +371,7 @@ public class UserBookingController {
         selectedTickets = new ArrayList<>();
         selectedProducts = new ProductSelectionResult(BigDecimal.ZERO, "Không chọn sản phẩm", new LinkedHashMap<>());
         selectedPromotion = null;
+        view.getProductSelectionPanel().setProducts(List.of());
         view.getPaymentPanel().setPromotions(List.of());
 
         loadMovies();

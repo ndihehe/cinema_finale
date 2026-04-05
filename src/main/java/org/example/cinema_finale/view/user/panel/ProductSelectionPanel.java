@@ -21,6 +21,7 @@ import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 
+import org.example.cinema_finale.dto.SanPhamDTO;
 import org.example.cinema_finale.dto.VeDTO;
 import org.example.cinema_finale.util.AppTheme;
 
@@ -33,20 +34,26 @@ public class ProductSelectionPanel extends JPanel {
     private final JLabel lblTicketInfo = new JLabel("Đã chọn 0 ghế", SwingConstants.LEFT);
     private final JLabel lblTotal = new JLabel("Tạm tính đồ ăn: 0 đ", SwingConstants.RIGHT);
 
-    private final JCheckBox cbComboCouple = new JCheckBox("Combo 1 bắp + 1 nước - 79,000 đ");
-    private final JSpinner spComboCouple = new JSpinner(new SpinnerNumberModel(1, 1, 10, 1));
-
-    private final JCheckBox cbComboFamily = new JCheckBox("Bắp rang bơ size M - 55,000 đ");
-    private final JSpinner spComboFamily = new JSpinner(new SpinnerNumberModel(1, 1, 10, 1));
-
-    private final JCheckBox cbWater = new JCheckBox("Coca Cola - 30,000 đ");
-    private final JSpinner spWater = new JSpinner(new SpinnerNumberModel(1, 1, 20, 1));
+    private final JPanel productsContainer = new JPanel();
+    private final List<ProductRow> productRows = new ArrayList<>();
 
     private final JButton btnBack = new JButton("Quay lại");
     private final JButton btnNext = new JButton("Tiếp tục");
 
     private Runnable backListener;
     private Consumer<ProductSelectionResult> nextListener;
+
+    private static class ProductRow {
+        private final SanPhamDTO sanPham;
+        private final JCheckBox checkBox;
+        private final JSpinner spinner;
+
+        private ProductRow(SanPhamDTO sanPham, JCheckBox checkBox, JSpinner spinner) {
+            this.sanPham = sanPham;
+            this.checkBox = checkBox;
+            this.spinner = spinner;
+        }
+    }
 
     public ProductSelectionPanel() {
         setLayout(new BorderLayout(10, 10));
@@ -62,18 +69,11 @@ public class ProductSelectionPanel extends JPanel {
         top.add(lblTicketInfo, BorderLayout.WEST);
         top.add(lblTotal, BorderLayout.EAST);
 
-        JPanel products = new JPanel();
-        products.setLayout(new javax.swing.BoxLayout(products, javax.swing.BoxLayout.Y_AXIS));
-        products.setBackground(AppTheme.BG_CARD);
-        products.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        productsContainer.setLayout(new javax.swing.BoxLayout(productsContainer, javax.swing.BoxLayout.Y_AXIS));
+        productsContainer.setBackground(AppTheme.BG_CARD);
+        productsContainer.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 
-        products.add(buildRow(cbComboCouple, spComboCouple));
-        products.add(javax.swing.Box.createVerticalStrut(8));
-        products.add(buildRow(cbComboFamily, spComboFamily));
-        products.add(javax.swing.Box.createVerticalStrut(8));
-        products.add(buildRow(cbWater, spWater));
-
-        JScrollPane scroll = new JScrollPane(products);
+        JScrollPane scroll = new JScrollPane(productsContainer);
         AppTheme.styleTitledPanel(scroll, "Chọn đồ ăn và thức uống");
 
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -87,14 +87,7 @@ public class ProductSelectionPanel extends JPanel {
         add(scroll, BorderLayout.CENTER);
         add(bottom, BorderLayout.SOUTH);
 
-        java.awt.event.ActionListener listener = e -> refreshTotal();
-        cbComboCouple.addActionListener(listener);
-        cbComboFamily.addActionListener(listener);
-        cbWater.addActionListener(listener);
-
-        ((JSpinner.DefaultEditor) spComboCouple.getEditor()).getTextField().addCaretListener(e -> refreshTotal());
-        ((JSpinner.DefaultEditor) spComboFamily.getEditor()).getTextField().addCaretListener(e -> refreshTotal());
-        ((JSpinner.DefaultEditor) spWater.getEditor()).getTextField().addCaretListener(e -> refreshTotal());
+        setProducts(List.of());
 
         btnBack.addActionListener(e -> {
             if (backListener != null) {
@@ -122,6 +115,39 @@ public class ProductSelectionPanel extends JPanel {
         refreshTotal();
     }
 
+    public void setProducts(List<SanPhamDTO> products) {
+        productsContainer.removeAll();
+        productRows.clear();
+
+        if (products == null || products.isEmpty()) {
+            JLabel empty = new JLabel("Hiện chưa có sản phẩm khả dụng", SwingConstants.LEFT);
+            empty.setForeground(AppTheme.TEXT_MUTED);
+            productsContainer.add(empty);
+        } else {
+            for (SanPhamDTO product : products) {
+                if (product == null || product.getDonGia() == null || product.getTenSanPham() == null) {
+                    continue;
+                }
+
+                int maxQty = Math.max(1, product.getSoLuongTon() == null ? 1 : product.getSoLuongTon());
+                JCheckBox checkBox = new JCheckBox(product.getTenSanPham() + " - " + formatVnd(product.getDonGia()));
+                JSpinner spinner = new JSpinner(new SpinnerNumberModel(1, 1, maxQty, 1));
+
+                java.awt.event.ActionListener listener = e -> refreshTotal();
+                checkBox.addActionListener(listener);
+                ((JSpinner.DefaultEditor) spinner.getEditor()).getTextField().addCaretListener(e -> refreshTotal());
+
+                productRows.add(new ProductRow(product, checkBox, spinner));
+                productsContainer.add(buildRow(checkBox, spinner));
+                productsContainer.add(javax.swing.Box.createVerticalStrut(8));
+            }
+        }
+
+        productsContainer.revalidate();
+        productsContainer.repaint();
+        refreshTotal();
+    }
+
     private JPanel buildRow(JCheckBox checkBox, JSpinner spinner) {
         JPanel row = new JPanel(new BorderLayout());
         row.setBackground(AppTheme.BG_CARD);
@@ -140,26 +166,26 @@ public class ProductSelectionPanel extends JPanel {
         List<String> notes = new ArrayList<>();
         Map<String, Integer> productQuantities = new LinkedHashMap<>();
 
-        total = total.add(addIfSelected(cbComboCouple, spComboCouple, 79_000,
-                "Combo 1 bắp + 1 nước", notes, productQuantities));
-        total = total.add(addIfSelected(cbComboFamily, spComboFamily, 55_000,
-                "Bắp rang bơ size M", notes, productQuantities));
-        total = total.add(addIfSelected(cbWater, spWater, 30_000,
-                "Coca Cola", notes, productQuantities));
+        for (ProductRow row : productRows) {
+            total = total.add(addIfSelected(row, notes, productQuantities));
+        }
 
         String note = notes.isEmpty() ? "Không chọn sản phẩm" : String.join(", ", notes);
         return new ProductSelectionResult(total, note, productQuantities);
     }
 
-    private BigDecimal addIfSelected(JCheckBox cb, JSpinner sp, int unitPrice, String label,
-                                     List<String> notes, Map<String, Integer> productQuantities) {
-        if (!cb.isSelected()) {
+    private BigDecimal addIfSelected(ProductRow row, List<String> notes, Map<String, Integer> productQuantities) {
+        if (!row.checkBox.isSelected()) {
             return BigDecimal.ZERO;
         }
-        int qty = (int) sp.getValue();
-        notes.add(label + " x" + qty);
-        productQuantities.put(label, qty);
-        return BigDecimal.valueOf((long) unitPrice * qty);
+
+        int qty = (int) row.spinner.getValue();
+        String productName = row.sanPham.getTenSanPham();
+        BigDecimal unitPrice = row.sanPham.getDonGia() == null ? BigDecimal.ZERO : row.sanPham.getDonGia();
+
+        notes.add(productName + " x" + qty);
+        productQuantities.put(productName, qty);
+        return unitPrice.multiply(BigDecimal.valueOf(qty));
     }
 
     private void refreshTotal() {

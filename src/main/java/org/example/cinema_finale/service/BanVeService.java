@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.example.cinema_finale.dao.ChiTietDonHangVeDao;
 import org.example.cinema_finale.dao.DonHangDao;
+import org.example.cinema_finale.dao.SanPhamDao;
 import org.example.cinema_finale.dao.ThanhToanDao;
 import org.example.cinema_finale.dao.VeDao;
 import org.example.cinema_finale.dto.BanVeThanhToanFormDTO;
@@ -46,6 +47,7 @@ public class BanVeService {
     private final DonHangDao donHangDao;
     private final ChiTietDonHangVeDao chiTietDonHangVeDao;
     private final VeDao veDao;
+    private final SanPhamDao sanPhamDao;
     private final ThanhToanDao thanhToanDao;
     private final VeService veService;
 
@@ -53,6 +55,7 @@ public class BanVeService {
         this.donHangDao = new DonHangDao();
         this.chiTietDonHangVeDao = new ChiTietDonHangVeDao();
         this.veDao = new VeDao();
+        this.sanPhamDao = new SanPhamDao();
         this.thanhToanDao = new ThanhToanDao();
         this.veService = new VeService();
     }
@@ -66,6 +69,7 @@ public class BanVeService {
         this.donHangDao = donHangDao;
         this.chiTietDonHangVeDao = chiTietDonHangVeDao;
         this.veDao = veDao;
+        this.sanPhamDao = new SanPhamDao();
         this.thanhToanDao = thanhToanDao;
         this.veService = new VeService();
     }
@@ -198,19 +202,7 @@ public class BanVeService {
                     if (item == null || isBlank(item.tenSanPham()) || item.soLuong() == null || item.soLuong() <= 0) {
                         continue;
                     }
-                    System.out.println("DEBUG UI: [" + item.tenSanPham() + "] - Độ dài: " + item.tenSanPham().length());
-
-                    // Sử dụng REPLACE để loại bỏ tất cả khoảng trắng khi so sánh
-                    // Sửa trong BanVeService.java
-                    SanPham sanPham = em.createQuery(
-                            "SELECT sp FROM SanPham sp WHERE REPLACE(sp.tenSanPham, ' ', '') LIKE REPLACE(:tenSanPham, ' ', '')", 
-                            SanPham.class
-                        )
-                        .setParameter("tenSanPham", "%" + item.tenSanPham().trim() + "%") // Thêm % ở hai đầu
-                        .setLockMode(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
-                        .getResultStream()
-                        .findFirst()
-                        .orElse(null);
+                    SanPham sanPham = sanPhamDao.findByTenSanPhamForUpdate(em, item.tenSanPham());
  
                     if (sanPham == null) {
                         return rollbackAndReturn(tx, "Sản phẩm không tồn tại: " + item.tenSanPham());
@@ -234,7 +226,7 @@ public class BanVeService {
                     em.persist(chiTietSP);
 
                     sanPham.setSoLuongTon(tonKho - item.soLuong());
-                    em.merge(sanPham);
+                    sanPhamDao.update(em, sanPham);
 
                     if (sanPham.getDonGia() != null) {
                         tongTien = tongTien.add(sanPham.getDonGia().multiply(BigDecimal.valueOf(item.soLuong())));
