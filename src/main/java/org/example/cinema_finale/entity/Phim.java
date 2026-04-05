@@ -1,47 +1,52 @@
 package org.example.cinema_finale.entity;
 
-import jakarta.persistence.*;
-import org.example.cinema_finale.enums.TrangThaiPhim;
-
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+
 @Entity
-@Table(name = "phim")
+@Table(name = "Phim")
 public class Phim {
 
     @Id
-    @Column(name = "ma_phim", length = 20, nullable = false)
-    private String maPhim;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "MaPhim")
+    private Integer maPhim;
 
-    @Column(name = "ten_phim", length = 255, nullable = false)
+    @Column(name = "TenPhim", nullable = false, length = 200)
     private String tenPhim;
 
-    @Column(name = "the_loai", length = 100, nullable = false)
+    @Column(name = "TheLoai", length = 100)
     private String theLoai;
 
-    @Column(name = "dao_dien", length = 100, nullable = false)
+    @Column(name = "DaoDien", length = 100)
     private String daoDien;
 
-    @Column(name = "thoi_luong", nullable = false)
+    @Column(name = "ThoiLuong", nullable = false)
     private Integer thoiLuong;
 
-    @Column(name = "gioi_han_tuoi", length = 20)
-    private String gioiHanTuoi;
+    @Column(name = "GioiHanTuoi")
+    private Integer gioiHanTuoi;
 
-    @Column(name = "dinh_dang", length = 50)
+    @Column(name = "DinhDang", length = 30)
     private String dinhDang;
 
-    @Column(name = "ngay_khoi_chieu")
+    @Column(name = "NgayKhoiChieu")
     private LocalDate ngayKhoiChieu;
 
-    @Column(name = "mo_ta", columnDefinition = "TEXT")
-    private String moTa;
+    @Column(name = "TrangThaiPhim", nullable = false, length = 30)
+    private String trangThaiPhim = "Sắp chiếu";
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "trang_thai_phim", length = 30, nullable = false)
-    private TrangThaiPhim trangThaiPhim;
+    @Column(name = "PosterUrl", length = 500)
+    private String posterUrl;
 
     @OneToMany(mappedBy = "phim")
     private List<SuatChieu> danhSachSuatChieu = new ArrayList<>();
@@ -49,66 +54,91 @@ public class Phim {
     public Phim() {
     }
 
-    public Phim(String maPhim, String tenPhim, String theLoai, String daoDien,
-                Integer thoiLuong, String gioiHanTuoi, String dinhDang,
-                LocalDate ngayKhoiChieu, String moTa, TrangThaiPhim trangThaiPhim) {
+    public Integer getMaPhim() {
+        return maPhim;
+    }
+
+    public void setMaPhim(Integer maPhim) {
         this.maPhim = maPhim;
+    }
+
+    public String getTenPhim() {
+        return tenPhim;
+    }
+
+    public void setTenPhim(String tenPhim) {
         this.tenPhim = tenPhim;
+    }
+
+    public String getTheLoai() {
+        return theLoai;
+    }
+
+    public void setTheLoai(String theLoai) {
         this.theLoai = theLoai;
+    }
+
+    public String getDaoDien() {
+        return daoDien;
+    }
+
+    public void setDaoDien(String daoDien) {
         this.daoDien = daoDien;
+    }
+
+    public Integer getThoiLuong() {
+        return thoiLuong;
+    }
+
+    public void setThoiLuong(Integer thoiLuong) {
         this.thoiLuong = thoiLuong;
+    }
+
+    public Integer getGioiHanTuoi() {
+        return gioiHanTuoi;
+    }
+
+    public void setGioiHanTuoi(Integer gioiHanTuoi) {
         this.gioiHanTuoi = gioiHanTuoi;
+    }
+
+    public String getDinhDang() {
+        return dinhDang;
+    }
+
+    public void setDinhDang(String dinhDang) {
         this.dinhDang = dinhDang;
+    }
+
+    public LocalDate getNgayKhoiChieu() {
+        return ngayKhoiChieu;
+    }
+
+    public void setNgayKhoiChieu(LocalDate ngayKhoiChieu) {
         this.ngayKhoiChieu = ngayKhoiChieu;
-        this.moTa = moTa;
+    }
+
+    public String getTrangThaiPhim() {
+        return trangThaiPhim;
+    }
+
+    public void setTrangThaiPhim(String trangThaiPhim) {
         this.trangThaiPhim = trangThaiPhim;
     }
 
-    public String getMaPhim() { return maPhim; }
-    public void setMaPhim(String maPhim) { this.maPhim = maPhim; }
+    public String getPosterUrl() {
+        return posterUrl;
+    }
 
-    public String getTenPhim() { return tenPhim; }
-    public void setTenPhim(String tenPhim) { this.tenPhim = tenPhim; }
+    public void setPosterUrl(String posterUrl) {
+        this.posterUrl = posterUrl;
+    }
 
-    public String getTheLoai() { return theLoai; }
-    public void setTheLoai(String theLoai) { this.theLoai = theLoai; }
+    public List<SuatChieu> getDanhSachSuatChieu() {
+        return danhSachSuatChieu;
+    }
 
-    public String getDaoDien() { return daoDien; }
-    public void setDaoDien(String daoDien) { this.daoDien = daoDien; }
-
-    public Integer getThoiLuong() { return thoiLuong; }
-    public void setThoiLuong(Integer thoiLuong) { this.thoiLuong = thoiLuong; }
-
-    public String getGioiHanTuoi() { return gioiHanTuoi; }
-    public void setGioiHanTuoi(String gioiHanTuoi) { this.gioiHanTuoi = gioiHanTuoi; }
-
-    public String getDinhDang() { return dinhDang; }
-    public void setDinhDang(String dinhDang) { this.dinhDang = dinhDang; }
-
-    public LocalDate getNgayKhoiChieu() { return ngayKhoiChieu; }
-    public void setNgayKhoiChieu(LocalDate ngayKhoiChieu) { this.ngayKhoiChieu = ngayKhoiChieu; }
-
-    public String getMoTa() { return moTa; }
-    public void setMoTa(String moTa) { this.moTa = moTa; }
-
-    public TrangThaiPhim getTrangThaiPhim() { return trangThaiPhim; }
-    public void setTrangThaiPhim(TrangThaiPhim trangThaiPhim) { this.trangThaiPhim = trangThaiPhim; }
-
-    public List<SuatChieu> getDanhSachSuatChieu() { return danhSachSuatChieu; }
-    public void setDanhSachSuatChieu(List<SuatChieu> danhSachSuatChieu) { this.danhSachSuatChieu = danhSachSuatChieu; }
-
-    @Override
-    public String toString() {
-        return "Phim{" +
-                "maPhim='" + maPhim + '\'' +
-                ", tenPhim='" + tenPhim + '\'' +
-                ", theLoai='" + theLoai + '\'' +
-                ", daoDien='" + daoDien + '\'' +
-                ", thoiLuong=" + thoiLuong +
-                ", gioiHanTuoi='" + gioiHanTuoi + '\'' +
-                ", dinhDang='" + dinhDang + '\'' +
-                ", ngayKhoiChieu=" + ngayKhoiChieu +
-                ", trangThaiPhim='" + trangThaiPhim + '\'' +
-                '}';
+    public void setDanhSachSuatChieu(List<SuatChieu> danhSachSuatChieu) {
+        this.danhSachSuatChieu = danhSachSuatChieu;
     }
 }

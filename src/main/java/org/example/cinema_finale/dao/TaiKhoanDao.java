@@ -4,18 +4,12 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
 import jakarta.persistence.NoResultException;
 import org.example.cinema_finale.entity.TaiKhoan;
-import org.example.cinema_finale.enums.TrangThaiTaiKhoan;
 import org.example.cinema_finale.util.JpaUtil;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 public class TaiKhoanDao {
 
-    /**
-     * Lấy toàn bộ tài khoản.
-     * JOIN FETCH để UI / auth không bị lazy khi cần biết chủ tài khoản là ai.
-     */
     public List<TaiKhoan> findAll() {
         EntityManager em = JpaUtil.getEntityManager();
         try {
@@ -31,19 +25,16 @@ public class TaiKhoanDao {
         }
     }
 
-    /**
-     * Tìm tài khoản theo mã.
-     */
-    public TaiKhoan findById(String maTk) {
+    public TaiKhoan findById(Integer maTaiKhoan) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return em.createQuery(
                             "SELECT tk FROM TaiKhoan tk " +
                                     "LEFT JOIN FETCH tk.nhanVien " +
                                     "LEFT JOIN FETCH tk.khachHang " +
-                                    "WHERE tk.maTk = :maTk",
+                                    "WHERE tk.maTaiKhoan = :maTaiKhoan",
                             TaiKhoan.class
-                    ).setParameter("maTk", maTk)
+                    ).setParameter("maTaiKhoan", maTaiKhoan)
                     .getSingleResult();
         } catch (NoResultException e) {
             return null;
@@ -52,9 +43,6 @@ public class TaiKhoanDao {
         }
     }
 
-    /**
-     * Tìm tài khoản theo tên đăng nhập.
-     */
     public TaiKhoan findByTenDangNhap(String tenDangNhap) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
@@ -73,19 +61,16 @@ public class TaiKhoanDao {
         }
     }
 
-    /**
-     * Tìm tài khoản theo mã nhân viên.
-     */
-    public TaiKhoan findByMaNhanVien(String maNv) {
+    public TaiKhoan findByMaNhanVien(Integer maNhanVien) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return em.createQuery(
                             "SELECT tk FROM TaiKhoan tk " +
                                     "LEFT JOIN FETCH tk.nhanVien " +
                                     "LEFT JOIN FETCH tk.khachHang " +
-                                    "WHERE tk.nhanVien.maNv = :maNv",
+                                    "WHERE tk.nhanVien.maNhanVien = :maNhanVien",
                             TaiKhoan.class
-                    ).setParameter("maNv", maNv)
+                    ).setParameter("maNhanVien", maNhanVien)
                     .getSingleResult();
         } catch (NoResultException e) {
             return null;
@@ -94,19 +79,16 @@ public class TaiKhoanDao {
         }
     }
 
-    /**
-     * Tìm tài khoản theo mã khách hàng.
-     */
-    public TaiKhoan findByMaKhachHang(String maKh) {
+    public TaiKhoan findByMaKhachHang(Integer maKhachHang) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return em.createQuery(
                             "SELECT tk FROM TaiKhoan tk " +
                                     "LEFT JOIN FETCH tk.nhanVien " +
                                     "LEFT JOIN FETCH tk.khachHang " +
-                                    "WHERE tk.khachHang.maKh = :maKh",
+                                    "WHERE tk.khachHang.maKhachHang = :maKhachHang",
                             TaiKhoan.class
-                    ).setParameter("maKh", maKh)
+                    ).setParameter("maKhachHang", maKhachHang)
                     .getSingleResult();
         } catch (NoResultException e) {
             return null;
@@ -115,9 +97,6 @@ public class TaiKhoanDao {
         }
     }
 
-    /**
-     * Lấy các tài khoản đang hoạt động.
-     */
     public List<TaiKhoan> findAllActive() {
         EntityManager em = JpaUtil.getEntityManager();
         try {
@@ -128,16 +107,13 @@ public class TaiKhoanDao {
                                     "WHERE tk.trangThaiTaiKhoan = :trangThai " +
                                     "ORDER BY tk.tenDangNhap ASC",
                             TaiKhoan.class
-                    ).setParameter("trangThai", TrangThaiTaiKhoan.HOAT_DONG)
+                    ).setParameter("trangThai", "Hoạt động")
                     .getResultList();
         } finally {
             em.close();
         }
     }
 
-    /**
-     * Thêm tài khoản mới.
-     */
     public boolean save(TaiKhoan taiKhoan) {
         EntityManager em = JpaUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
@@ -158,9 +134,6 @@ public class TaiKhoanDao {
         }
     }
 
-    /**
-     * Cập nhật tài khoản.
-     */
     public boolean update(TaiKhoan taiKhoan) {
         EntityManager em = JpaUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
@@ -181,15 +154,12 @@ public class TaiKhoanDao {
         }
     }
 
-    /**
-     * Khóa / mở khóa tài khoản bằng trạng thái.
-     */
-    public boolean updateTrangThai(String maTk, TrangThaiTaiKhoan trangThaiTaiKhoan) {
+    public boolean updateTrangThai(Integer maTaiKhoan, String trangThaiTaiKhoan) {
         EntityManager em = JpaUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
 
         try {
-            TaiKhoan taiKhoan = em.find(TaiKhoan.class, maTk);
+            TaiKhoan taiKhoan = em.find(TaiKhoan.class, maTaiKhoan);
             if (taiKhoan == null) {
                 return false;
             }
@@ -210,45 +180,12 @@ public class TaiKhoanDao {
         }
     }
 
-    /**
-     * Cập nhật lần đăng nhập cuối.
-     */
-    public boolean updateLastLogin(String maTk, LocalDateTime lanDangNhapCuoi) {
-        EntityManager em = JpaUtil.getEntityManager();
-        EntityTransaction tx = em.getTransaction();
-
-        try {
-            TaiKhoan taiKhoan = em.find(TaiKhoan.class, maTk);
-            if (taiKhoan == null) {
-                return false;
-            }
-
-            tx.begin();
-            taiKhoan.setLanDangNhapCuoi(lanDangNhapCuoi);
-            em.merge(taiKhoan);
-            tx.commit();
-            return true;
-        } catch (Exception e) {
-            if (tx.isActive()) {
-                tx.rollback();
-            }
-            e.printStackTrace();
-            return false;
-        } finally {
-            em.close();
-        }
+    public boolean delete(Integer maTaiKhoan) {
+        return updateTrangThai(maTaiKhoan, "Khóa");
     }
 
-    /**
-     * Không xóa cứng tài khoản.
-     * Để an toàn nghiệp vụ, chuyển sang NGUNG_SU_DUNG.
-     */
-    public boolean delete(String maTk) {
-        return updateTrangThai(maTk, TrangThaiTaiKhoan.NGUNG_SU_DUNG);
-    }
-
-    public boolean existsById(String maTk) {
-        return findById(maTk) != null;
+    public boolean existsById(Integer maTaiKhoan) {
+        return findById(maTaiKhoan) != null;
     }
 
     public boolean existsByTenDangNhap(String tenDangNhap) {

@@ -2,16 +2,16 @@ package org.example.cinema_finale.service;
 
 import org.example.cinema_finale.dao.PhimDao;
 import org.example.cinema_finale.dao.SuatChieuDao;
+import org.example.cinema_finale.dto.SuatChieuDTO;
 import org.example.cinema_finale.entity.Phim;
+import org.example.cinema_finale.entity.PhongChieu;
 import org.example.cinema_finale.entity.SuatChieu;
-import org.example.cinema_finale.enums.TrangThaiPhim;
-import org.example.cinema_finale.enums.TrangThaiSuatChieu;
 import org.example.cinema_finale.util.AuthorizationUtil;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class SuatChieuService {
 
@@ -28,222 +28,164 @@ public class SuatChieuService {
         this.phimDao = phimDao;
     }
 
-    public List<SuatChieu> getAllSuatChieu() {
-        return suatChieuDao.findAll();
+    // ==========================================
+    // 1. MAPPER: Chuyển đổi giữa Entity và DTO
+    // ==========================================
+    private SuatChieuDTO toDTO(SuatChieu sc) {
+        if (sc == null) return null;
+        return new SuatChieuDTO(
+                sc.getMaSuatChieu(),
+                sc.getPhim() != null ? sc.getPhim().getMaPhim() : null,
+                sc.getPhim() != null ? sc.getPhim().getTenPhim() : "",
+                sc.getPhongChieu() != null ? sc.getPhongChieu().getMaPhongChieu() : null,
+                sc.getPhongChieu() != null ? sc.getPhongChieu().getTenPhongChieu() : "",
+                sc.getNgayGioChieu(),
+                sc.getGiaVeCoBan(),
+                sc.getTrangThaiSuatChieu()
+        );
     }
 
-    public List<SuatChieu> getAllForBooking() {
-        return suatChieuDao.findAllForBooking();
-    }
+    private SuatChieu toEntity(SuatChieuDTO dto) {
+        if (dto == null) return null;
+        SuatChieu sc = new SuatChieu();
+        sc.setMaSuatChieu(dto.getMaSuatChieu());
+        sc.setNgayGioChieu(dto.getNgayGioChieu());
+        sc.setGiaVeCoBan(dto.getGiaVeCoBan() != null ? dto.getGiaVeCoBan() : BigDecimal.ZERO);
+        sc.setTrangThaiSuatChieu(normalizeSuatChieuStatus(dto.getTrangThaiSuatChieu()));
 
-    public SuatChieu getSuatChieuById(String maSuatChieu) {
-        if (isBlank(maSuatChieu)) {
-            return null;
+        // Gắn quan hệ Phim
+        if (dto.getMaPhim() != null) {
+            Phim phim = new Phim();
+            phim.setMaPhim(dto.getMaPhim());
+            sc.setPhim(phim);
         }
-        return suatChieuDao.findById(maSuatChieu.trim());
-    }
 
-    public List<SuatChieu> getByMaPhim(String maPhim) {
-        if (isBlank(maPhim)) {
-            return List.of();
+        // Gắn quan hệ Phòng chiếu
+        if (dto.getMaPhongChieu() != null) {
+            PhongChieu phongChieu = new PhongChieu();
+            phongChieu.setMaPhongChieu(dto.getMaPhongChieu());
+            sc.setPhongChieu(phongChieu);
         }
-        return suatChieuDao.findByMaPhim(maPhim.trim());
+
+        return sc;
     }
 
-    public List<SuatChieu> getByNgay(LocalDate ngay) {
-        if (ngay == null) {
-            return List.of();
-        }
-        return suatChieuDao.findByNgay(ngay);
+    // ==========================================
+    // 2. PUBLIC API DÀNH CHO VIEW / CONTROLLER
+    // ==========================================
+    public List<SuatChieuDTO> getAllSuatChieu() {
+        return suatChieuDao.findAll().stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    public List<SuatChieu> getByPhongAndNgay(String maPhongChieu, LocalDate ngay) {
-        if (isBlank(maPhongChieu) || ngay == null) {
-            return List.of();
-        }
-        return suatChieuDao.findByPhongAndNgay(maPhongChieu.trim(), ngay);
+    public List<SuatChieuDTO> getAllForBooking() {
+        return suatChieuDao.findAllForBooking().stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    public List<SuatChieu> getByTrangThai(TrangThaiSuatChieu trangThaiSuatChieu) {
-        if (trangThaiSuatChieu == null) {
-            return List.of();
-        }
-        return suatChieuDao.findByTrangThai(trangThaiSuatChieu);
+    public SuatChieuDTO getSuatChieuById(String maSuatChieu) {
+        Integer id = parseId(maSuatChieu);
+        return id == null ? null : toDTO(suatChieuDao.findById(id));
     }
 
-    public String addSuatChieu(SuatChieu suatChieu) {
+    public String addSuatChieu(SuatChieuDTO suatChieuDTO) {
         AuthorizationUtil.requireStaff();
+        SuatChieu entity = toEntity(suatChieuDTO);
 
-        String validation = validateSuatChieu(suatChieu, true);
-        if (validation != null) {
-            return validation;
-        }
+        String validation = validateSuatChieu(entity, true);
+        if (validation != null) return validation;
 
-        boolean result = suatChieuDao.save(suatChieu);
-        return result ? "Thêm suất chiếu thành công." : "Thêm suất chiếu thất bại.";
+        return suatChieuDao.save(entity) ? "Thêm suất chiếu thành công." : "Thêm suất chiếu thất bại do lỗi DB.";
     }
 
-    public String updateSuatChieu(SuatChieu suatChieu) {
+    public String updateSuatChieu(SuatChieuDTO suatChieuDTO) {
         AuthorizationUtil.requireStaff();
+        SuatChieu entity = toEntity(suatChieuDTO);
 
-        String validation = validateSuatChieu(suatChieu, false);
-        if (validation != null) {
-            return validation;
-        }
+        String validation = validateSuatChieu(entity, false);
+        if (validation != null) return validation;
 
-        boolean result = suatChieuDao.update(suatChieu);
-        return result ? "Cập nhật suất chiếu thành công." : "Cập nhật suất chiếu thất bại.";
+        return suatChieuDao.update(entity) ? "Cập nhật suất chiếu thành công." : "Cập nhật suất chiếu thất bại.";
     }
 
-    /**
-     * Giữ tên hàm cũ để UI/controller cũ ít bị vỡ.
-     * Thực tế là hủy suất chiếu chứ không xóa cứng.
-     */
     public String deleteSuatChieu(String maSuatChieu) {
-        return cancelSuatChieu(maSuatChieu);
-    }
-
-    public String cancelSuatChieu(String maSuatChieu) {
         AuthorizationUtil.requireStaff();
+        Integer id = parseId(maSuatChieu);
+        if (id == null) return "Mã suất chiếu không hợp lệ.";
 
-        if (isBlank(maSuatChieu)) {
-            return "Mã suất chiếu không được để trống.";
-        }
-
-        SuatChieu suatChieu = suatChieuDao.findById(maSuatChieu.trim());
-        if (suatChieu == null) {
-            return "Suất chiếu không tồn tại.";
-        }
-
-        boolean result = suatChieuDao.updateTrangThai(maSuatChieu.trim(), TrangThaiSuatChieu.HUY);
-        return result ? "Hủy suất chiếu thành công." : "Hủy suất chiếu thất bại.";
+        return suatChieuDao.delete(id) ? "Hủy suất chiếu thành công." : "Hủy suất chiếu thất bại.";
     }
 
-    public String updateTrangThai(String maSuatChieu, TrangThaiSuatChieu trangThaiSuatChieu) {
-        AuthorizationUtil.requireStaff();
+    // ==========================================
+    // 3. LOGIC NGHIỆP VỤ NỘI BỘ (PRIVATE)
+    // ==========================================
+    private String validateSuatChieu(SuatChieu sc, boolean isCreate) {
+        if (sc == null) return "Dữ liệu suất chiếu không hợp lệ.";
+        if (!isCreate && sc.getMaSuatChieu() == null) return "Mã suất chiếu không được trống khi cập nhật.";
+        if (sc.getPhim() == null || sc.getPhim().getMaPhim() == null) return "Vui lòng chọn phim.";
+        if (sc.getPhongChieu() == null || sc.getPhongChieu().getMaPhongChieu() == null) return "Vui lòng chọn phòng chiếu.";
+        if (sc.getNgayGioChieu() == null) return "Vui lòng chọn ngày giờ chiếu.";
+        if (sc.getGiaVeCoBan() == null || sc.getGiaVeCoBan().compareTo(BigDecimal.ZERO) < 0) return "Giá vé cơ bản không được âm.";
 
-        if (isBlank(maSuatChieu)) {
-            return "Mã suất chiếu không được để trống.";
-        }
+        // Lấy thông tin phim từ DB để có "Thời lượng" phục vụ tính toán trùng lịch
+        Phim phimDb = phimDao.findById(sc.getPhim().getMaPhim());
+        if (phimDb == null) return "Bộ phim không tồn tại trong hệ thống.";
+        sc.setPhim(phimDb); // Gắn lại phim đầy đủ dữ liệu vào suất chiếu
 
-        if (trangThaiSuatChieu == null) {
-            return "Trạng thái suất chiếu không hợp lệ.";
-        }
-
-        SuatChieu suatChieu = suatChieuDao.findById(maSuatChieu.trim());
-        if (suatChieu == null) {
-            return "Suất chiếu không tồn tại.";
-        }
-
-        boolean result = suatChieuDao.updateTrangThai(maSuatChieu.trim(), trangThaiSuatChieu);
-        return result ? "Cập nhật trạng thái suất chiếu thành công."
-                : "Cập nhật trạng thái suất chiếu thất bại.";
-    }
-
-    private String validateSuatChieu(SuatChieu suatChieu, boolean isCreate) {
-        if (suatChieu == null) {
-            return "Dữ liệu suất chiếu không hợp lệ.";
-        }
-
-        if (isBlank(suatChieu.getMaSuatChieu())) {
-            return "Mã suất chiếu không được để trống.";
-        }
-
-        if (suatChieu.getNgayGioChieu() == null) {
-            return "Ngày giờ chiếu không được để trống.";
-        }
-
-        if (isCreate && suatChieu.getNgayGioChieu().isBefore(LocalDateTime.now())) {
-            return "Không thể tạo suất chiếu trong quá khứ.";
-        }
-
-        if (isBlank(suatChieu.getMaPhongChieu())) {
-            return "Mã phòng chiếu không được để trống.";
-        }
-
-        if (suatChieu.getGiaVeCoBan() == null) {
-            return "Giá vé cơ bản không được để trống.";
-        }
-
-        if (suatChieu.getGiaVeCoBan().compareTo(BigDecimal.ZERO) <= 0) {
-            return "Giá vé cơ bản phải lớn hơn 0.";
-        }
-
-        if (suatChieu.getTrangThaiSuatChieu() == null) {
-            return "Trạng thái suất chiếu không được để trống.";
-        }
-
-        if (suatChieu.getPhim() == null || isBlank(suatChieu.getPhim().getMaPhim())) {
-            return "Phim của suất chiếu không hợp lệ.";
-        }
-
-        Phim phim = phimDao.findById(suatChieu.getPhim().getMaPhim().trim());
-        if (phim == null) {
-            return "Phim không tồn tại.";
-        }
-
-        if (phim.getTrangThaiPhim() == TrangThaiPhim.NGUNG_CHIEU) {
-            return "Không thể tạo suất chiếu cho phim đã ngừng chiếu.";
-        }
-
-        if (phim.getThoiLuong() == null || phim.getThoiLuong() <= 0) {
-            return "Thời lượng phim không hợp lệ.";
-        }
-
-        suatChieu.setMaSuatChieu(suatChieu.getMaSuatChieu().trim());
-        suatChieu.setMaPhongChieu(suatChieu.getMaPhongChieu().trim());
-        suatChieu.setPhim(phim);
-
-        if (isCreate && suatChieuDao.existsById(suatChieu.getMaSuatChieu())) {
-            return "Mã suất chiếu đã tồn tại.";
-        }
-
-        if (!isCreate && suatChieuDao.findById(suatChieu.getMaSuatChieu()) == null) {
+        if (!isCreate && suatChieuDao.findById(sc.getMaSuatChieu()) == null) {
             return "Suất chiếu không tồn tại để cập nhật.";
         }
 
-        if (isTrungLichPhong(suatChieu, phim.getThoiLuong())) {
-            return "Suất chiếu bị trùng lịch với suất khác trong cùng phòng.";
+        if (isChongLich(sc, isCreate)) {
+            return "Trùng lịch! Suất chiếu này bị đụng giờ với một suất chiếu khác trong cùng phòng.";
         }
 
         return null;
     }
 
-    private boolean isTrungLichPhong(SuatChieu suatChieuMoi, int thoiLuongPhut) {
-        List<SuatChieu> cungPhongCungNgay = suatChieuDao.findByPhongAndNgay(
-                suatChieuMoi.getMaPhongChieu(),
-                suatChieuMoi.getNgayGioChieu().toLocalDate()
-        );
+    private boolean isChongLich(SuatChieu scMoi, boolean isCreate) {
+        if (scMoi.getPhim() == null || scMoi.getPhim().getThoiLuong() == null) return false;
 
-        LocalDateTime batDauMoi = suatChieuMoi.getNgayGioChieu();
-        LocalDateTime ketThucMoi = batDauMoi.plusMinutes(thoiLuongPhut);
+        LocalDateTime batDauMoi = scMoi.getNgayGioChieu();
+        LocalDateTime ketThucMoi = batDauMoi.plusMinutes(scMoi.getPhim().getThoiLuong());
 
-        for (SuatChieu hienCo : cungPhongCungNgay) {
-            if (hienCo.getTrangThaiSuatChieu() == TrangThaiSuatChieu.HUY) {
-                continue;
-            }
-
-            if (hienCo.getMaSuatChieu().equals(suatChieuMoi.getMaSuatChieu())) {
-                continue;
-            }
-
-            if (hienCo.getPhim() == null || hienCo.getPhim().getThoiLuong() == null) {
-                continue;
-            }
+        List<SuatChieu> danhSachSuatChieu = suatChieuDao.findAll();
+        for (SuatChieu hienCo : danhSachSuatChieu) {
+            // Bỏ qua chính nó nếu đang update
+            if (!isCreate && hienCo.getMaSuatChieu().equals(scMoi.getMaSuatChieu())) continue;
+            // Bỏ qua khác phòng chiếu
+            if (hienCo.getPhongChieu() == null || !hienCo.getPhongChieu().getMaPhongChieu().equals(scMoi.getPhongChieu().getMaPhongChieu())) continue;
+            // Bỏ qua các suất đã hủy
+            if ("Hủy".equalsIgnoreCase(hienCo.getTrangThaiSuatChieu())) continue;
+            // Bỏ qua nếu data phim bị lỗi (không có thời lượng)
+            if (hienCo.getPhim() == null || hienCo.getPhim().getThoiLuong() == null) continue;
 
             LocalDateTime batDauCu = hienCo.getNgayGioChieu();
             LocalDateTime ketThucCu = batDauCu.plusMinutes(hienCo.getPhim().getThoiLuong());
 
+            // Công thức kiểm tra trùng lịch (Overlap logic)
             boolean biChongLich = batDauMoi.isBefore(ketThucCu) && ketThucMoi.isAfter(batDauCu);
             if (biChongLich) {
                 return true;
             }
         }
-
         return false;
     }
 
-    private boolean isBlank(String value) {
-        return value == null || value.trim().isEmpty();
+    private Integer parseId(String value) {
+        if (value == null || value.trim().isEmpty()) return null;
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private String normalizeSuatChieuStatus(Object raw) {
+        if (raw == null) return "Sắp chiếu"; // Default value
+        String value = raw.toString().trim();
+        if (value.equalsIgnoreCase("Sắp chiếu") || value.equalsIgnoreCase("SAP_CHIEU")) return "Sắp chiếu";
+        if (value.equalsIgnoreCase("Đang chiếu") || value.equalsIgnoreCase("DANG_CHIEU") || value.equalsIgnoreCase("DANG_MO_BAN")) return "Đang chiếu";
+        if (value.equalsIgnoreCase("Đã chiếu") || value.equalsIgnoreCase("DA_CHIEU")) return "Đã chiếu";
+        if (value.equalsIgnoreCase("Hủy") || value.equalsIgnoreCase("HUY")) return "Hủy";
+        return "Sắp chiếu";
     }
 }

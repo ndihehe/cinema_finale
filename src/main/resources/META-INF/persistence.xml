@@ -13,14 +13,28 @@
         <class>org.example.cinema_finale.entity.DonHang</class>
         <class>org.example.cinema_finale.entity.ChiTietDonHangVe</class>
         <class>org.example.cinema_finale.entity.ThanhToan</class>
+        <class>org.example.cinema_finale.entity.Ghe</class>
+        <class>org.example.cinema_finale.entity.PhongChieu</class>
+        <class>org.example.cinema_finale.entity.ChucVu</class>
+        <class>org.example.cinema_finale.entity.GheNgoi</class>
+        <class>org.example.cinema_finale.entity.KhuyenMai</class>
+        <class>org.example.cinema_finale.entity.LoaiGheNgoi</class>
+        <class>org.example.cinema_finale.entity.LoaiKhuyenMai</class>
+        <class>org.example.cinema_finale.entity.ChiTietDonHangSanPham</class>
+        <class>org.example.cinema_finale.entity.DanhMucSanPham</class>
+        <class>org.example.cinema_finale.entity.LoaiSanPham</class>
+        <class>org.example.cinema_finale.entity.SanPham</class>
+
 
         <properties>
             <property name="javax.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
-            <property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/cinema_db?useSSL=false&amp;serverTimezone=UTC"/>
+            <property name="jakarta.persistence.jdbc.url"
+                      value="jdbc:mysql://localhost:3306/quanlybanvexemphim?useUnicode=true&amp;characterEncoding=UTF-8&amp;serverTimezone=UTC"/>
             <property name="javax.persistence.jdbc.user" value="root"/>
-            <property name="javax.persistence.jdbc.password" value="MAT_KHAU_THAT"/>
+            <property name="javax.persistence.jdbc.password" value="Bnnduy2286."/>
 
-            <property name="hibernate.dialect" value="org.hibernate.dialect.MySQL8Dialect"/>
+            <property name="hibernate.dialect"
+                      value="org.hibernate.dialect.MySQLDialect"/>
             <property name="hibernate.show_sql" value="true"/>
             <property name="hibernate.format_sql" value="true"/>
             <property name="hibernate.hbm2ddl.auto" value="update"/>

@@ -4,7 +4,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
 import jakarta.persistence.NoResultException;
 import org.example.cinema_finale.entity.DonHang;
-import org.example.cinema_finale.enums.TrangThaiDonHang;
 import org.example.cinema_finale.util.JpaUtil;
 
 import java.util.List;
@@ -17,8 +16,9 @@ public class DonHangDao {
             return em.createQuery(
                     "SELECT dh FROM DonHang dh " +
                             "LEFT JOIN FETCH dh.khachHang " +
-                            "LEFT JOIN FETCH dh.nhanVien " +
-                            "ORDER BY dh.thoiGianTao DESC",
+                            "JOIN FETCH dh.nhanVien " +
+                            "LEFT JOIN FETCH dh.khuyenMai " +
+                            "ORDER BY dh.ngayLap DESC",
                     DonHang.class
             ).getResultList();
         } finally {
@@ -26,7 +26,7 @@ public class DonHangDao {
         }
     }
 
-    public DonHang findById(String maDonHang) {
+    public DonHang findById(Integer maDonHang) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return findById(em, maDonHang);
@@ -35,12 +35,13 @@ public class DonHangDao {
         }
     }
 
-    public DonHang findById(EntityManager em, String maDonHang) {
+    public DonHang findById(EntityManager em, Integer maDonHang) {
         try {
             return em.createQuery(
                             "SELECT dh FROM DonHang dh " +
                                     "LEFT JOIN FETCH dh.khachHang " +
-                                    "LEFT JOIN FETCH dh.nhanVien " +
+                                    "JOIN FETCH dh.nhanVien " +
+                                    "LEFT JOIN FETCH dh.khuyenMai " +
                                     "WHERE dh.maDonHang = :maDonHang",
                             DonHang.class
                     ).setParameter("maDonHang", maDonHang)
@@ -50,7 +51,7 @@ public class DonHangDao {
         }
     }
 
-    public DonHang findDetailById(String maDonHang) {
+    public DonHang findDetailById(Integer maDonHang) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return findDetailById(em, maDonHang);
@@ -59,17 +60,26 @@ public class DonHangDao {
         }
     }
 
-    public DonHang findDetailById(EntityManager em, String maDonHang) {
+    public DonHang findDetailById(EntityManager em, Integer maDonHang) {
         try {
             return em.createQuery(
                             "SELECT DISTINCT dh FROM DonHang dh " +
                                     "LEFT JOIN FETCH dh.khachHang " +
-                                    "LEFT JOIN FETCH dh.nhanVien " +
-                                    "LEFT JOIN FETCH dh.chiTietDonHangVes ct " +
-                                    "LEFT JOIN FETCH ct.ve v " +
-                                    "LEFT JOIN FETCH v.loaiVe " +
-                                    "LEFT JOIN FETCH v.suatChieu sc " +
+                                    "JOIN FETCH dh.nhanVien " +
+                                    "LEFT JOIN FETCH dh.khuyenMai " +
+                                    "LEFT JOIN FETCH dh.chiTietDonHangVes ctv " +
+                                    "LEFT JOIN FETCH ctv.ve vv " +
+                                    "LEFT JOIN FETCH vv.loaiVe " +
+                                    "LEFT JOIN FETCH vv.gheNgoi g " +
+                                    "LEFT JOIN FETCH g.phongChieu " +
+                                    "LEFT JOIN FETCH g.loaiGheNgoi " +
+                                    "LEFT JOIN FETCH vv.suatChieu sc " +
                                     "LEFT JOIN FETCH sc.phim " +
+                                    "LEFT JOIN FETCH sc.phongChieu " +
+                                    "LEFT JOIN FETCH dh.chiTietDonHangSanPhams ctsp " +
+                                    "LEFT JOIN FETCH ctsp.sanPham sp " +
+                                    "LEFT JOIN FETCH sp.loaiSanPham lsp " +
+                                    "LEFT JOIN FETCH lsp.danhMucSanPham " +
                                     "LEFT JOIN FETCH dh.thanhToans " +
                                     "WHERE dh.maDonHang = :maDonHang",
                             DonHang.class
@@ -80,32 +90,34 @@ public class DonHangDao {
         }
     }
 
-    public List<DonHang> findByMaKhachHang(String maKh) {
+    public List<DonHang> findByMaKhachHang(Integer maKhachHang) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return em.createQuery(
                             "SELECT dh FROM DonHang dh " +
                                     "LEFT JOIN FETCH dh.khachHang " +
-                                    "LEFT JOIN FETCH dh.nhanVien " +
-                                    "WHERE dh.khachHang.maKh = :maKh " +
-                                    "ORDER BY dh.thoiGianTao DESC",
+                                    "JOIN FETCH dh.nhanVien " +
+                                    "LEFT JOIN FETCH dh.khuyenMai " +
+                                    "WHERE dh.khachHang.maKhachHang = :maKhachHang " +
+                                    "ORDER BY dh.ngayLap DESC",
                             DonHang.class
-                    ).setParameter("maKh", maKh)
+                    ).setParameter("maKhachHang", maKhachHang)
                     .getResultList();
         } finally {
             em.close();
         }
     }
 
-    public List<DonHang> findByTrangThai(TrangThaiDonHang trangThaiDonHang) {
+    public List<DonHang> findByTrangThai(String trangThaiDonHang) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return em.createQuery(
                             "SELECT dh FROM DonHang dh " +
                                     "LEFT JOIN FETCH dh.khachHang " +
-                                    "LEFT JOIN FETCH dh.nhanVien " +
+                                    "JOIN FETCH dh.nhanVien " +
+                                    "LEFT JOIN FETCH dh.khuyenMai " +
                                     "WHERE dh.trangThaiDonHang = :trangThai " +
-                                    "ORDER BY dh.thoiGianTao DESC",
+                                    "ORDER BY dh.ngayLap DESC",
                             DonHang.class
                     ).setParameter("trangThai", trangThaiDonHang)
                     .getResultList();
@@ -156,11 +168,11 @@ public class DonHangDao {
         return em.merge(donHang);
     }
 
-    public boolean delete(String maDonHang) {
-        return updateTrangThai(maDonHang, TrangThaiDonHang.DA_HUY);
+    public boolean delete(Integer maDonHang) {
+        return updateTrangThai(maDonHang, "Đã hủy");
     }
 
-    public boolean updateTrangThai(String maDonHang, TrangThaiDonHang trangThaiDonHang) {
+    public boolean updateTrangThai(Integer maDonHang, String trangThaiDonHang) {
         EntityManager em = JpaUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
         try {
@@ -177,7 +189,7 @@ public class DonHangDao {
         }
     }
 
-    public boolean updateTrangThai(EntityManager em, String maDonHang, TrangThaiDonHang trangThaiDonHang) {
+    public boolean updateTrangThai(EntityManager em, Integer maDonHang, String trangThaiDonHang) {
         DonHang donHang = em.find(DonHang.class, maDonHang);
         if (donHang == null) {
             return false;
@@ -187,7 +199,7 @@ public class DonHangDao {
         return true;
     }
 
-    public boolean existsById(String maDonHang) {
+    public boolean existsById(Integer maDonHang) {
         return findById(maDonHang) != null;
     }
 }

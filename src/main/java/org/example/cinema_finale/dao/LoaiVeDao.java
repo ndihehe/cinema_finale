@@ -21,7 +21,7 @@ public class LoaiVeDao {
         }
     }
 
-    public LoaiVe findById(String maLoaiVe) {
+    public LoaiVe findById(Integer maLoaiVe) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             return em.find(LoaiVe.class, maLoaiVe);
@@ -85,11 +85,7 @@ public class LoaiVeDao {
         }
     }
 
-    /**
-     * Với LoaiVe không có trạng thái riêng nên vẫn hard delete.
-     * Nếu đã phát sinh Ve thì DB sẽ tự chặn bởi FK.
-     */
-    public boolean delete(String maLoaiVe) {
+    public boolean delete(Integer maLoaiVe) {
         EntityManager em = JpaUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
 
@@ -114,7 +110,7 @@ public class LoaiVeDao {
         }
     }
 
-    public boolean existsById(String maLoaiVe) {
+    public boolean existsById(Integer maLoaiVe) {
         return findById(maLoaiVe) != null;
     }
 }

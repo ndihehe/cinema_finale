@@ -1,8 +1,10 @@
 package org.example.cinema_finale.util;
 
+import java.text.Normalizer;
+import java.util.Locale;
+
 import org.example.cinema_finale.entity.TaiKhoan;
-import org.example.cinema_finale.entity.VaiTro;
-import org.example.cinema_finale.enums.TrangThaiTaiKhoan;
+import org.example.cinema_finale.enums.VaiTro;
 
 public final class SessionManager {
 
@@ -13,8 +15,6 @@ public final class SessionManager {
 
     /**
      * Lưu tài khoản đang đăng nhập vào phiên làm việc hiện tại.
-     *
-     * @param taiKhoan tài khoản đang đăng nhập
      */
     public static void setCurrentTaiKhoan(TaiKhoan taiKhoan) {
         currentTaiKhoan = taiKhoan;
@@ -22,20 +22,38 @@ public final class SessionManager {
 
     /**
      * Lấy tài khoản đang đăng nhập.
-     *
-     * @return tài khoản hiện tại
      */
     public static TaiKhoan getCurrentTaiKhoan() {
         return currentTaiKhoan;
     }
 
     /**
-     * Lấy vai trò hiện tại.
-     *
-     * @return vai trò hiện tại, null nếu chưa đăng nhập
+     * Lấy vai trò hiện tại từ cột loaiTaiKhoan trong entity TaiKhoan.
+     * DB hiện dùng giá trị: "NhanVien" hoặc "KhachHang".
      */
     public static VaiTro getCurrentVaiTro() {
-        return currentTaiKhoan != null ? currentTaiKhoan.getVaiTro() : null;
+        if (currentTaiKhoan == null) {
+            return null;
+        }
+
+        if (currentTaiKhoan.getKhachHang() != null) {
+            return VaiTro.KHACH_HANG;
+        }
+        if (currentTaiKhoan.getNhanVien() != null) {
+            return VaiTro.NHAN_VIEN;
+        }
+
+        String loaiTaiKhoan = currentTaiKhoan.getLoaiTaiKhoan();
+        if (loaiTaiKhoan == null) {
+            return null;
+        }
+
+        String normalized = normalizeRoleValue(loaiTaiKhoan);
+        return switch (normalized) {
+            case "nhanvien", "nhânviên", "nhan_vien", "staff" -> VaiTro.NHAN_VIEN;
+            case "khachhang", "kháchhàng", "khach_hang", "customer", "user" -> VaiTro.KHACH_HANG;
+            default -> null;
+        };
     }
 
     /**
@@ -47,8 +65,6 @@ public final class SessionManager {
 
     /**
      * Kiểm tra hiện tại đã có người đăng nhập hay chưa.
-     *
-     * @return true nếu đã đăng nhập, false nếu chưa đăng nhập
      */
     public static boolean isLoggedIn() {
         return currentTaiKhoan != null;
@@ -56,38 +72,57 @@ public final class SessionManager {
 
     /**
      * Kiểm tra tài khoản hiện tại có đang hoạt động hay không.
-     *
-     * @return true nếu tài khoản đang hoạt động
+     * Với schema mới, trạng thái hoạt động được lưu bằng String trong TaiKhoan.trangThaiTaiKhoan.
      */
     public static boolean isActiveAccount() {
         return currentTaiKhoan != null
-                && currentTaiKhoan.getTrangThaiTaiKhoan() == TrangThaiTaiKhoan.HOAT_DONG;
+                && currentTaiKhoan.getTrangThaiTaiKhoan() != null
+                && "Hoạt động".equalsIgnoreCase(currentTaiKhoan.getTrangThaiTaiKhoan().trim());
     }
 
     /**
-     * Kiểm tra tài khoản hiện tại có vai trò STAFF hay không.
-     *
-     * @return true nếu là staff
+     * Kiểm tra tài khoản hiện tại có vai trò nhân viên hay không.
      */
     public static boolean isStaff() {
-        return currentTaiKhoan != null && currentTaiKhoan.isStaff();
+        if (currentTaiKhoan == null) {
+            return false;
+        }
+        if (currentTaiKhoan.getNhanVien() != null) {
+            return true;
+        }
+        return getCurrentVaiTro() == VaiTro.NHAN_VIEN;
     }
 
     /**
-     * Kiểm tra tài khoản hiện tại có vai trò CUSTOMER hay không.
-     *
-     * @return true nếu là khách hàng
+     * Kiểm tra tài khoản hiện tại có vai trò khách hàng hay không.
      */
     public static boolean isCustomer() {
-        return currentTaiKhoan != null && currentTaiKhoan.isCustomer();
+        if (currentTaiKhoan == null) {
+            return false;
+        }
+        if (currentTaiKhoan.getKhachHang() != null) {
+            return true;
+        }
+        return getCurrentVaiTro() == VaiTro.KHACH_HANG;
     }
 
     /**
      * Giữ lại để tương thích với code cũ.
-     *
-     * @return true nếu là khách hàng
      */
     public static boolean isUser() {
         return isCustomer();
+    }
+
+    private static String normalizeRoleValue(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        String noAccent = Normalizer.normalize(value, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "");
+
+        return noAccent
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]", "");
     }
 }

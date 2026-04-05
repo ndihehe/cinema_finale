@@ -1,31 +1,27 @@
 package org.example.cinema_finale.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
-
+import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "loai_ve")
+@Table(name = "LoaiVe")
 public class LoaiVe {
 
     @Id
-    @Column(name = "ma_loai_ve", length = 20, nullable = false)
-    private String maLoaiVe;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "MaLoaiVe")
+    private Integer maLoaiVe;
 
-    @Column(name = "ten_loai_ve", length = 100, nullable = false)
+    @Column(name = "TenLoaiVe", nullable = false, unique = true, length = 100)
     private String tenLoaiVe;
 
-    @Column(name = "mo_ta", length = 255)
-    private String moTa;
-
-    @Column(name = "phu_thu_gia", precision = 12, scale = 2, nullable = false)
+    @Column(name = "PhuThuGia", nullable = false, precision = 18, scale = 2)
     private BigDecimal phuThuGia = BigDecimal.ZERO;
+
+    @Column(name = "MoTa", length = 255)
+    private String moTa;
 
     @OneToMany(mappedBy = "loaiVe")
     private List<Ve> danhSachVe = new ArrayList<>();
@@ -33,18 +29,11 @@ public class LoaiVe {
     public LoaiVe() {
     }
 
-    public LoaiVe(String maLoaiVe, String tenLoaiVe, String moTa, BigDecimal phuThuGia) {
-        this.maLoaiVe = maLoaiVe;
-        this.tenLoaiVe = tenLoaiVe;
-        this.moTa = moTa;
-        this.phuThuGia = phuThuGia;
-    }
-
-    public String getMaLoaiVe() {
+    public Integer getMaLoaiVe() {
         return maLoaiVe;
     }
 
-    public void setMaLoaiVe(String maLoaiVe) {
+    public void setMaLoaiVe(Integer maLoaiVe) {
         this.maLoaiVe = maLoaiVe;
     }
 
@@ -56,14 +45,6 @@ public class LoaiVe {
         this.tenLoaiVe = tenLoaiVe;
     }
 
-    public String getMoTa() {
-        return moTa;
-    }
-
-    public void setMoTa(String moTa) {
-        this.moTa = moTa;
-    }
-
     public BigDecimal getPhuThuGia() {
         return phuThuGia;
     }
@@ -72,21 +53,19 @@ public class LoaiVe {
         this.phuThuGia = phuThuGia;
     }
 
+    public String getMoTa() {
+        return moTa;
+    }
+
+    public void setMoTa(String moTa) {
+        this.moTa = moTa;
+    }
+
     public List<Ve> getDanhSachVe() {
         return danhSachVe;
     }
 
     public void setDanhSachVe(List<Ve> danhSachVe) {
         this.danhSachVe = danhSachVe;
-    }
-
-    @Override
-    public String toString() {
-        return "LoaiVe{" +
-                "maLoaiVe='" + maLoaiVe + '\'' +
-                ", tenLoaiVe='" + tenLoaiVe + '\'' +
-                ", moTa='" + moTa + '\'' +
-                ", phuThuGia=" + phuThuGia +
-                '}';
     }
 }

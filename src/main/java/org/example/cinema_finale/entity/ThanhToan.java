@@ -1,73 +1,42 @@
 package org.example.cinema_finale.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import org.example.cinema_finale.enums.TrangThaiThanhToan;
-
+import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "thanh_toan")
+@Table(name = "ThanhToan")
 public class ThanhToan {
 
     @Id
-    @Column(name = "ma_thanh_toan", length = 20, nullable = false)
-    private String maThanhToan;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "MaThanhToan")
+    private Integer maThanhToan;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ma_don_hang", nullable = false)
+    @JoinColumn(name = "MaDonHang", nullable = false)
     private DonHang donHang;
 
-    @Column(name = "so_tien", precision = 12, scale = 2, nullable = false)
+    @Column(name = "SoTien", nullable = false, precision = 18, scale = 2)
     private BigDecimal soTien;
 
-    @Column(name = "phuong_thuc_thanh_toan", length = 50, nullable = false)
+    @Column(name = "PhuongThucThanhToan", nullable = false, length = 50)
     private String phuongThucThanhToan;
 
-    @Column(name = "thoi_gian_thanh_toan")
+    @Column(name = "ThoiGianThanhToan", nullable = false)
     private LocalDateTime thoiGianThanhToan;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ma_nv")
-    private NhanVien nhanVien;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "trang_thai_thanh_toan", length = 30, nullable = false)
-    private TrangThaiThanhToan trangThaiThanhToan;
-
-    @Column(name = "ma_giao_dich", length = 50)
-    private String maGiaoDich;
+    @Column(name = "TrangThaiThanhToan", nullable = false, length = 30)
+    private String trangThaiThanhToan = "Thành công";
 
     public ThanhToan() {
     }
 
-    public ThanhToan(String maThanhToan, DonHang donHang, BigDecimal soTien,
-                     String phuongThucThanhToan, LocalDateTime thoiGianThanhToan,
-                     NhanVien nhanVien, TrangThaiThanhToan trangThaiThanhToan,
-                     String maGiaoDich) {
-        this.maThanhToan = maThanhToan;
-        this.donHang = donHang;
-        this.soTien = soTien;
-        this.phuongThucThanhToan = phuongThucThanhToan;
-        this.thoiGianThanhToan = thoiGianThanhToan;
-        this.nhanVien = nhanVien;
-        this.trangThaiThanhToan = trangThaiThanhToan;
-        this.maGiaoDich = maGiaoDich;
-    }
-
-    public String getMaThanhToan() {
+    public Integer getMaThanhToan() {
         return maThanhToan;
     }
 
-    public void setMaThanhToan(String maThanhToan) {
+    public void setMaThanhToan(Integer maThanhToan) {
         this.maThanhToan = maThanhToan;
     }
 
@@ -103,41 +72,11 @@ public class ThanhToan {
         this.thoiGianThanhToan = thoiGianThanhToan;
     }
 
-    public NhanVien getNhanVien() {
-        return nhanVien;
-    }
-
-    public void setNhanVien(NhanVien nhanVien) {
-        this.nhanVien = nhanVien;
-    }
-
-    public TrangThaiThanhToan getTrangThaiThanhToan() {
+    public String getTrangThaiThanhToan() {
         return trangThaiThanhToan;
     }
 
-    public void setTrangThaiThanhToan(TrangThaiThanhToan trangThaiThanhToan) {
+    public void setTrangThaiThanhToan(String trangThaiThanhToan) {
         this.trangThaiThanhToan = trangThaiThanhToan;
-    }
-
-    public String getMaGiaoDich() {
-        return maGiaoDich;
-    }
-
-    public void setMaGiaoDich(String maGiaoDich) {
-        this.maGiaoDich = maGiaoDich;
-    }
-
-    @Override
-    public String toString() {
-        return "ThanhToan{" +
-                "maThanhToan='" + maThanhToan + '\'' +
-                ", maDonHang='" + (donHang != null ? donHang.getMaDonHang() : null) + '\'' +
-                ", soTien=" + soTien +
-                ", phuongThucThanhToan='" + phuongThucThanhToan + '\'' +
-                ", thoiGianThanhToan=" + thoiGianThanhToan +
-                ", maNv='" + (nhanVien != null ? nhanVien.getMaNv() : null) + '\'' +
-                ", trangThaiThanhToan=" + trangThaiThanhToan +
-                ", maGiaoDich='" + maGiaoDich + '\'' +
-                '}';
     }
 }

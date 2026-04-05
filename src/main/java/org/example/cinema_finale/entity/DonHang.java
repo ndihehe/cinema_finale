@@ -1,62 +1,45 @@
 package org.example.cinema_finale.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
-import org.example.cinema_finale.enums.TrangThaiDonHang;
-
-import java.math.BigDecimal;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "don_hang")
+@Table(name = "DonHang")
 public class DonHang {
 
     @Id
-    @Column(name = "ma_don_hang", length = 20, nullable = false)
-    private String maDonHang;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "MaDonHang")
+    private Integer maDonHang;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ma_kh")
+    @JoinColumn(name = "MaKhachHang")
     private KhachHang khachHang;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ma_nv")
+    @JoinColumn(name = "MaNhanVien", nullable = false)
     private NhanVien nhanVien;
 
-    @Column(name = "ma_khuyen_mai", length = 20)
-    private String maKhuyenMai;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "MaKhuyenMai")
+    private KhuyenMai khuyenMai;
 
-    @Column(name = "thoi_gian_tao", nullable = false)
-    private LocalDateTime thoiGianTao;
+    @Column(name = "NgayLap", nullable = false)
+    private LocalDateTime ngayLap;
 
-    @Column(name = "tong_tien_truoc_giam", precision = 12, scale = 2, nullable = false)
-    private BigDecimal tongTienTruocGiam = BigDecimal.ZERO;
+    @Column(name = "TrangThaiDonHang", nullable = false, length = 30)
+    private String trangThaiDonHang = "Chưa thanh toán";
 
-    @Column(name = "tien_giam", precision = 12, scale = 2, nullable = false)
-    private BigDecimal tienGiam = BigDecimal.ZERO;
-
-    @Column(name = "tong_tien_sau_giam", precision = 12, scale = 2, nullable = false)
-    private BigDecimal tongTienSauGiam = BigDecimal.ZERO;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "trang_thai_don_hang", length = 30, nullable = false)
-    private TrangThaiDonHang trangThaiDonHang;
-
-    @Column(name = "ghi_chu", length = 255)
+    @Column(name = "GhiChu", length = 255)
     private String ghiChu;
 
     @OneToMany(mappedBy = "donHang")
     private List<ChiTietDonHangVe> chiTietDonHangVes = new ArrayList<>();
+
+    @OneToMany(mappedBy = "donHang")
+    private List<ChiTietDonHangSanPham> chiTietDonHangSanPhams = new ArrayList<>();
 
     @OneToMany(mappedBy = "donHang")
     private List<ThanhToan> thanhToans = new ArrayList<>();
@@ -64,28 +47,11 @@ public class DonHang {
     public DonHang() {
     }
 
-    public DonHang(String maDonHang, KhachHang khachHang, NhanVien nhanVien,
-                   String maKhuyenMai, LocalDateTime thoiGianTao,
-                   BigDecimal tongTienTruocGiam, BigDecimal tienGiam,
-                   BigDecimal tongTienSauGiam, TrangThaiDonHang trangThaiDonHang,
-                   String ghiChu) {
-        this.maDonHang = maDonHang;
-        this.khachHang = khachHang;
-        this.nhanVien = nhanVien;
-        this.maKhuyenMai = maKhuyenMai;
-        this.thoiGianTao = thoiGianTao;
-        this.tongTienTruocGiam = tongTienTruocGiam;
-        this.tienGiam = tienGiam;
-        this.tongTienSauGiam = tongTienSauGiam;
-        this.trangThaiDonHang = trangThaiDonHang;
-        this.ghiChu = ghiChu;
-    }
-
-    public String getMaDonHang() {
+    public Integer getMaDonHang() {
         return maDonHang;
     }
 
-    public void setMaDonHang(String maDonHang) {
+    public void setMaDonHang(Integer maDonHang) {
         this.maDonHang = maDonHang;
     }
 
@@ -105,51 +71,27 @@ public class DonHang {
         this.nhanVien = nhanVien;
     }
 
-    public String getMaKhuyenMai() {
-        return maKhuyenMai;
+    public KhuyenMai getKhuyenMai() {
+        return khuyenMai;
     }
 
-    public void setMaKhuyenMai(String maKhuyenMai) {
-        this.maKhuyenMai = maKhuyenMai;
+    public void setKhuyenMai(KhuyenMai khuyenMai) {
+        this.khuyenMai = khuyenMai;
     }
 
-    public LocalDateTime getThoiGianTao() {
-        return thoiGianTao;
+    public LocalDateTime getNgayLap() {
+        return ngayLap;
     }
 
-    public void setThoiGianTao(LocalDateTime thoiGianTao) {
-        this.thoiGianTao = thoiGianTao;
+    public void setNgayLap(LocalDateTime ngayLap) {
+        this.ngayLap = ngayLap;
     }
 
-    public BigDecimal getTongTienTruocGiam() {
-        return tongTienTruocGiam;
-    }
-
-    public void setTongTienTruocGiam(BigDecimal tongTienTruocGiam) {
-        this.tongTienTruocGiam = tongTienTruocGiam;
-    }
-
-    public BigDecimal getTienGiam() {
-        return tienGiam;
-    }
-
-    public void setTienGiam(BigDecimal tienGiam) {
-        this.tienGiam = tienGiam;
-    }
-
-    public BigDecimal getTongTienSauGiam() {
-        return tongTienSauGiam;
-    }
-
-    public void setTongTienSauGiam(BigDecimal tongTienSauGiam) {
-        this.tongTienSauGiam = tongTienSauGiam;
-    }
-
-    public TrangThaiDonHang getTrangThaiDonHang() {
+    public String getTrangThaiDonHang() {
         return trangThaiDonHang;
     }
 
-    public void setTrangThaiDonHang(TrangThaiDonHang trangThaiDonHang) {
+    public void setTrangThaiDonHang(String trangThaiDonHang) {
         this.trangThaiDonHang = trangThaiDonHang;
     }
 
@@ -169,26 +111,19 @@ public class DonHang {
         this.chiTietDonHangVes = chiTietDonHangVes;
     }
 
+    public List<ChiTietDonHangSanPham> getChiTietDonHangSanPhams() {
+        return chiTietDonHangSanPhams;
+    }
+
+    public void setChiTietDonHangSanPhams(List<ChiTietDonHangSanPham> chiTietDonHangSanPhams) {
+        this.chiTietDonHangSanPhams = chiTietDonHangSanPhams;
+    }
+
     public List<ThanhToan> getThanhToans() {
         return thanhToans;
     }
 
     public void setThanhToans(List<ThanhToan> thanhToans) {
         this.thanhToans = thanhToans;
-    }
-
-    @Override
-    public String toString() {
-        return "DonHang{" +
-                "maDonHang='" + maDonHang + '\'' +
-                ", maKh='" + (khachHang != null ? khachHang.getMaKh() : null) + '\'' +
-                ", maNv='" + (nhanVien != null ? nhanVien.getMaNv() : null) + '\'' +
-                ", maKhuyenMai='" + maKhuyenMai + '\'' +
-                ", thoiGianTao=" + thoiGianTao +
-                ", tongTienTruocGiam=" + tongTienTruocGiam +
-                ", tienGiam=" + tienGiam +
-                ", tongTienSauGiam=" + tongTienSauGiam +
-                ", trangThaiDonHang=" + trangThaiDonHang +
-                '}';
     }
 }

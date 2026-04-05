@@ -1,83 +1,63 @@
 package org.example.cinema_finale.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
-
+import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
-@Table(name = "khach_hang")
+@Table(name = "KhachHang")
 public class KhachHang {
 
     @Id
-    @Column(name = "ma_kh", length = 20, nullable = false)
-    private String maKh;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "MaKhachHang")
+    private Integer maKhachHang;
 
-    @Column(name = "ten_kh", length = 100, nullable = false)
-    private String tenKh;
+    @Column(name = "HoTen", nullable = false, length = 100)
+    private String hoTen;
 
-    @Column(name = "so_dien_thoai", length = 15)
+    @Column(name = "SoDienThoai", unique = true, length = 15)
     private String soDienThoai;
 
-    @Column(name = "email", length = 100)
+    @Column(name = "Email", unique = true, length = 100)
     private String email;
 
-    @Column(name = "gioi_tinh", length = 10)
+    @Column(name = "GioiTinh", length = 10)
     private String gioiTinh;
 
-    @Column(name = "ngay_sinh")
+    @Column(name = "NgaySinh")
     private LocalDate ngaySinh;
 
-    @Column(name = "dia_chi", length = 255)
-    private String diaChi;
-
-    @Column(name = "diem_tich_luy", nullable = false)
+    @Column(name = "DiemTichLuy", nullable = false)
     private Integer diemTichLuy = 0;
 
-    @Column(name = "hang_thanh_vien", length = 30)
-    private String hangThanhVien;
-
-    @Column(name = "ngay_tao")
-    private LocalDate ngayTao;
+    @Column(name = "HangThanhVien", nullable = false, length = 30)
+    private String hangThanhVien = "Thường";
 
     @OneToOne(mappedBy = "khachHang")
     private TaiKhoan taiKhoan;
 
+    @OneToMany(mappedBy = "khachHang")
+    private List<DonHang> danhSachDonHang = new ArrayList<>();
+
     public KhachHang() {
     }
 
-    public KhachHang(String maKh, String tenKh, String soDienThoai, String email,
-                     String gioiTinh, LocalDate ngaySinh, String diaChi,
-                     Integer diemTichLuy, String hangThanhVien, LocalDate ngayTao) {
-        this.maKh = maKh;
-        this.tenKh = tenKh;
-        this.soDienThoai = soDienThoai;
-        this.email = email;
-        this.gioiTinh = gioiTinh;
-        this.ngaySinh = ngaySinh;
-        this.diaChi = diaChi;
-        this.diemTichLuy = diemTichLuy;
-        this.hangThanhVien = hangThanhVien;
-        this.ngayTao = ngayTao;
+    public Integer getMaKhachHang() {
+        return maKhachHang;
     }
 
-    public String getMaKh() {
-        return maKh;
+    public void setMaKhachHang(Integer maKhachHang) {
+        this.maKhachHang = maKhachHang;
     }
 
-    public void setMaKh(String maKh) {
-        this.maKh = maKh;
+    public String getHoTen() {
+        return hoTen;
     }
 
-    public String getTenKh() {
-        return tenKh;
-    }
-
-    public void setTenKh(String tenKh) {
-        this.tenKh = tenKh;
+    public void setHoTen(String hoTen) {
+        this.hoTen = hoTen;
     }
 
     public String getSoDienThoai() {
@@ -112,14 +92,6 @@ public class KhachHang {
         this.ngaySinh = ngaySinh;
     }
 
-    public String getDiaChi() {
-        return diaChi;
-    }
-
-    public void setDiaChi(String diaChi) {
-        this.diaChi = diaChi;
-    }
-
     public Integer getDiemTichLuy() {
         return diemTichLuy;
     }
@@ -136,14 +108,6 @@ public class KhachHang {
         this.hangThanhVien = hangThanhVien;
     }
 
-    public LocalDate getNgayTao() {
-        return ngayTao;
-    }
-
-    public void setNgayTao(LocalDate ngayTao) {
-        this.ngayTao = ngayTao;
-    }
-
     public TaiKhoan getTaiKhoan() {
         return taiKhoan;
     }
@@ -152,19 +116,11 @@ public class KhachHang {
         this.taiKhoan = taiKhoan;
     }
 
-    @Override
-    public String toString() {
-        return "KhachHang{" +
-                "maKh='" + maKh + '\'' +
-                ", tenKh='" + tenKh + '\'' +
-                ", soDienThoai='" + soDienThoai + '\'' +
-                ", email='" + email + '\'' +
-                ", gioiTinh='" + gioiTinh + '\'' +
-                ", ngaySinh=" + ngaySinh +
-                ", diaChi='" + diaChi + '\'' +
-                ", diemTichLuy=" + diemTichLuy +
-                ", hangThanhVien='" + hangThanhVien + '\'' +
-                ", ngayTao=" + ngayTao +
-                '}';
+    public List<DonHang> getDanhSachDonHang() {
+        return danhSachDonHang;
+    }
+
+    public void setDanhSachDonHang(List<DonHang> danhSachDonHang) {
+        this.danhSachDonHang = danhSachDonHang;
     }
 }
