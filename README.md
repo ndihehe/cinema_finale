@@ -33,7 +33,7 @@ cinema_finale/
 │  │  └─ resources/
 │  │     ├─ META-INF/
 │  │     └─ images/
-├─ database.sql
+├─ data.sql
 ├─ README.md
 ├─ pom.xml
 └─ .gitignore
