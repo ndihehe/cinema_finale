@@ -41,7 +41,7 @@ cinema_finale/
 
 ## 4. Cách chạy project
 ### Bước 1: Tạo database
-Tạo database MySQL: "quanlybanvexemphim.sql"
+Tạo database MySQL: "QuanLyBanVeXemPhim.sql"
 
 ### Bước 2: Cấu hình kết nối
 Chỉnh file:
