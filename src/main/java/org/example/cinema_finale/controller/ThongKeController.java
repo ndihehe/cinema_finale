@@ -10,8 +10,8 @@ import org.example.cinema_finale.dto.ThongKeDoanhSoDTO;
 import org.example.cinema_finale.service.PhimService;
 import org.example.cinema_finale.service.ThongKeDoanhSoService;
 import org.example.cinema_finale.util.DataSyncEventBus;
-import org.example.cinema_finale.view.ThongKePanel;
-import org.example.cinema_finale.view.ThongKePanel.MovieCardData;
+import org.example.cinema_finale.view.panel.staff.ThongKePanel;
+import org.example.cinema_finale.view.panel.staff.ThongKePanel.MovieCardData;
 
 public class ThongKeController {
 

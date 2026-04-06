@@ -1,12 +1,13 @@
 package org.example.cinema_finale.controller;
 
+import java.time.LocalDate;
+
+import javax.swing.JOptionPane;
+
 import org.example.cinema_finale.dto.NhanVienDTO;
 import org.example.cinema_finale.dto.NhanVienFormDTO;
 import org.example.cinema_finale.service.NhanVienService;
-import org.example.cinema_finale.view.NhanVienPanel;
-
-import javax.swing.*;
-import java.time.LocalDate;
+import org.example.cinema_finale.view.panel.staff.NhanVienPanel;
 
 public class NhanVienController {
 

@@ -1,4 +1,4 @@
-package org.example.cinema_finale.view;
+package org.example.cinema_finale.view.panel.staff;
 
 import java.awt.BorderLayout;
 import java.awt.Component;

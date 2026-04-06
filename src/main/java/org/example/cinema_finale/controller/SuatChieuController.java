@@ -19,7 +19,7 @@ import org.example.cinema_finale.service.PhimService;
 import org.example.cinema_finale.service.PhongChieuService;
 import org.example.cinema_finale.service.SuatChieuService;
 import org.example.cinema_finale.util.DataSyncEventBus;
-import org.example.cinema_finale.view.SuatChieuPanel;
+import org.example.cinema_finale.view.panel.staff.SuatChieuPanel;
 
 public class SuatChieuController {
 

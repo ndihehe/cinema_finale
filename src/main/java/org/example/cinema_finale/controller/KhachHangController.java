@@ -1,12 +1,13 @@
 package org.example.cinema_finale.controller;
 
+import java.time.ZoneId;
+
+import javax.swing.JOptionPane;
+
 import org.example.cinema_finale.dto.KhachHangDTO;
 import org.example.cinema_finale.dto.KhachHangFormDTO;
 import org.example.cinema_finale.service.KhachHangService;
-import org.example.cinema_finale.view.KhachHangPanel;
-
-import javax.swing.*;
-import java.time.ZoneId;
+import org.example.cinema_finale.view.panel.staff.KhachHangPanel;
 
 public class KhachHangController {
 

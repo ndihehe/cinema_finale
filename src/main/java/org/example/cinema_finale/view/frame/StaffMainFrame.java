@@ -22,16 +22,16 @@ import org.example.cinema_finale.entity.TaiKhoan;
 import org.example.cinema_finale.util.AppTheme;
 import org.example.cinema_finale.util.AuthorizationUtil;
 import org.example.cinema_finale.util.SessionManager;
-import org.example.cinema_finale.view.KhachHangPanel;
-import org.example.cinema_finale.view.KhuyenMaiPanel;
-import org.example.cinema_finale.view.NhanVienPanel;
-import org.example.cinema_finale.view.PhimPanel;
-import org.example.cinema_finale.view.PhongChieuPanel;
-import org.example.cinema_finale.view.SuatChieuPanel;
-import org.example.cinema_finale.view.ThongKePanel;
+import org.example.cinema_finale.view.panel.staff.KhachHangPanel;
+import org.example.cinema_finale.view.panel.staff.KhuyenMaiPanel;
+import org.example.cinema_finale.view.panel.staff.NhanVienPanel;
+import org.example.cinema_finale.view.panel.staff.PhimPanel;
+import org.example.cinema_finale.view.panel.staff.PhongChieuPanel;
 import org.example.cinema_finale.view.panel.staff.StaffHomePanel;
 import org.example.cinema_finale.view.panel.staff.StaffStatusBar;
 import org.example.cinema_finale.view.panel.staff.StaffTopMenuPanel;
+import org.example.cinema_finale.view.panel.staff.SuatChieuPanel;
+import org.example.cinema_finale.view.panel.staff.ThongKePanel;
 
 public class StaffMainFrame extends JFrame {
 
