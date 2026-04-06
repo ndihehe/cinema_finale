@@ -9,7 +9,7 @@ import javax.swing.JOptionPane;
 
 import org.example.cinema_finale.dto.GheDTO;
 import org.example.cinema_finale.service.GheService;
-import org.example.cinema_finale.view.GhePanel;
+import org.example.cinema_finale.view.panel.staff.GhePanel;
 
 public class GheController {
 

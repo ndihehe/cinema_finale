@@ -1,4 +1,4 @@
-package org.example.cinema_finale.view;
+package org.example.cinema_finale.view.panel.staff;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -17,54 +17,36 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 
-import org.example.cinema_finale.tablemodel.KhachHangTableModel;
+import org.example.cinema_finale.tablemodel.PhongChieuTableModel;
 import org.example.cinema_finale.util.AppTheme;
 
-import com.toedter.calendar.JDateChooser;
-
-public class KhachHangPanel extends JPanel {
+public class PhongChieuPanel extends JPanel {
 
     public JTextField txtMa = new JTextField();
     public JTextField txtTen = new JTextField();
-    public JTextField txtSDT = new JTextField();
-    public JTextField txtEmail = new JTextField();
-    public JTextField txtDiem = new JTextField();
+    public JTextField txtManHinh = new JTextField();
+    public JTextField txtAmThanh = new JTextField();
+    public JTextField txtSoHang = new JTextField();
+    public JTextField txtSoCot = new JTextField();
 
-    public JComboBox<String> cboGioiTinh =
-            new JComboBox<>(new String[]{"Nam", "Nữ", "Khác"});
-
-    public JComboBox<String> cboHang =
-            new JComboBox<>(new String[]{"Thường", "VIP", "Vàng"});
-
-    public JDateChooser dateChooser = new JDateChooser();
-
-    public JTextField txtSearch = new JTextField(15);
+    public JComboBox<String> cboTrangThai =
+            new JComboBox<>(new String[]{"Hoạt động", "Bảo trì"});
 
     public JButton btnAdd = new JButton("Thêm");
     public JButton btnUpdate = new JButton("Sửa");
+    public JButton btnDelete = new JButton("Xóa");
+    public JButton btnSeatMap = new JButton("Sơ đồ ghế");
 
     public JTable table;
-    public KhachHangTableModel tableModel;
+    public PhongChieuTableModel tableModel;
 
-    public KhachHangPanel() {
+    public PhongChieuPanel() {
 
         setLayout(new BorderLayout(10,10));
 
-        // ===== SEARCH =====
-        JPanel top = new JPanel();
-
-        JLabel lblSearch = new JLabel("Tìm:");
-
-        AppTheme.styleSearchField(txtSearch);
-
-        top.add(lblSearch);
-        top.add(txtSearch);
-
-        add(top, BorderLayout.NORTH);
-
         // ===== FORM =====
         JPanel form = new JPanel(new GridBagLayout());
-        AppTheme.styleTitledPanel(form, "Thông tin khách hàng");
+        AppTheme.styleTitledPanel(form, "Thông tin phòng");
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5,5,5,5);
@@ -72,18 +54,17 @@ public class KhachHangPanel extends JPanel {
 
         int y = 0;
         addField(form, gbc, y++, "Mã", txtMa);
-        addField(form, gbc, y++, "Họ tên", txtTen);
-        addField(form, gbc, y++, "SĐT", txtSDT);
-        addField(form, gbc, y++, "Email", txtEmail);
-        addField(form, gbc, y++, "Giới tính", cboGioiTinh);
-        addField(form, gbc, y++, "Ngày sinh", dateChooser);
-        addField(form, gbc, y++, "Điểm", txtDiem);
-        addField(form, gbc, y++, "Hạng", cboHang);
+        addField(form, gbc, y++, "Tên", txtTen);
+        addField(form, gbc, y++, "Số hàng", txtSoHang);
+        addField(form, gbc, y++, "Số cột", txtSoCot);
+        addField(form, gbc, y++, "Màn hình", txtManHinh);
+        addField(form, gbc, y++, "Âm thanh", txtAmThanh);
+        addField(form, gbc, y++, "Trạng thái", cboTrangThai);
 
         add(form, BorderLayout.WEST);
 
         // ===== TABLE =====
-        tableModel = new KhachHangTableModel();
+        tableModel = new PhongChieuTableModel();
         table = new JTable(tableModel);
         AppTheme.styleTable(table);
 
@@ -94,13 +75,18 @@ public class KhachHangPanel extends JPanel {
 
         AppTheme.styleSuccessButton(btnAdd);
         AppTheme.styleWarningButton(btnUpdate);
+        AppTheme.styleDangerButton(btnDelete);
+        AppTheme.stylePrimaryButton(btnSeatMap);
 
         btn.add(btnAdd);
         btn.add(btnUpdate);
+        btn.add(btnDelete);
+        btn.add(btnSeatMap);
 
         add(btn, BorderLayout.SOUTH);
 
         setUIStyle();
+
         txtMa.setEditable(false);
     }
 
@@ -124,8 +110,8 @@ public class KhachHangPanel extends JPanel {
         Dimension size = new Dimension(200, 28);
 
         for (Component c : new Component[]{
-                txtMa, txtTen, txtSDT, txtEmail, txtDiem,
-                dateChooser, cboGioiTinh, cboHang
+                txtMa, txtTen, txtSoHang, txtSoCot,
+                txtManHinh, txtAmThanh, cboTrangThai
         }) {
             c.setFont(font);
             c.setPreferredSize(size);

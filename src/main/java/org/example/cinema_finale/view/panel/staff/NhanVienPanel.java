@@ -1,4 +1,4 @@
-package org.example.cinema_finale.view;
+package org.example.cinema_finale.view.panel.staff;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -17,36 +17,59 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 
-import org.example.cinema_finale.tablemodel.PhongChieuTableModel;
+import org.example.cinema_finale.tablemodel.NhanVienTableModel;
 import org.example.cinema_finale.util.AppTheme;
 
-public class PhongChieuPanel extends JPanel {
+public class NhanVienPanel extends JPanel {
 
+    // ===== SEARCH =====
+    public JTextField txtSearch = new JTextField(15);
+
+    // ===== FORM =====
     public JTextField txtMa = new JTextField();
     public JTextField txtTen = new JTextField();
-    public JTextField txtManHinh = new JTextField();
-    public JTextField txtAmThanh = new JTextField();
-    public JTextField txtSoHang = new JTextField();
-    public JTextField txtSoCot = new JTextField();
+    public JTextField txtNgaySinh = new JTextField();
+    public JTextField txtSDT = new JTextField();
+    public JTextField txtEmail = new JTextField();
+    public JTextField txtDiaChi = new JTextField();
+
+    public JComboBox<String> cboGioiTinh =
+            new JComboBox<>(new String[]{"Nam", "Nữ", "Khác"});
 
     public JComboBox<String> cboTrangThai =
-            new JComboBox<>(new String[]{"Hoạt động", "Bảo trì"});
+            new JComboBox<>(new String[]{"Đang làm", "Nghỉ việc"});
 
+    public JComboBox<String> cboChucVu =
+            new JComboBox<>(new String[]{"1", "2", "3"});
+
+    // ===== BUTTON =====
     public JButton btnAdd = new JButton("Thêm");
     public JButton btnUpdate = new JButton("Sửa");
-    public JButton btnDelete = new JButton("Xóa");
-    public JButton btnSeatMap = new JButton("Sơ đồ ghế");
+    public JButton btnDelete = new JButton("Nghỉ việc");
 
+    // ===== TABLE =====
     public JTable table;
-    public PhongChieuTableModel tableModel;
+    public NhanVienTableModel tableModel;
 
-    public PhongChieuPanel() {
+    public NhanVienPanel() {
 
         setLayout(new BorderLayout(10,10));
 
+        // ===== SEARCH =====
+        JPanel top = new JPanel();
+
+        JLabel lblSearch = new JLabel("Tìm:");
+
+        AppTheme.styleSearchField(txtSearch);
+
+        top.add(lblSearch);
+        top.add(txtSearch);
+
+        add(top, BorderLayout.NORTH);
+
         // ===== FORM =====
         JPanel form = new JPanel(new GridBagLayout());
-        AppTheme.styleTitledPanel(form, "Thông tin phòng");
+        AppTheme.styleTitledPanel(form, "Thông tin nhân viên");
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5,5,5,5);
@@ -54,17 +77,19 @@ public class PhongChieuPanel extends JPanel {
 
         int y = 0;
         addField(form, gbc, y++, "Mã", txtMa);
-        addField(form, gbc, y++, "Tên", txtTen);
-        addField(form, gbc, y++, "Số hàng", txtSoHang);
-        addField(form, gbc, y++, "Số cột", txtSoCot);
-        addField(form, gbc, y++, "Màn hình", txtManHinh);
-        addField(form, gbc, y++, "Âm thanh", txtAmThanh);
+        addField(form, gbc, y++, "Họ tên", txtTen);
+        addField(form, gbc, y++, "Ngày sinh", txtNgaySinh);
+        addField(form, gbc, y++, "Giới tính", cboGioiTinh);
+        addField(form, gbc, y++, "SĐT", txtSDT);
+        addField(form, gbc, y++, "Email", txtEmail);
+        addField(form, gbc, y++, "Địa chỉ", txtDiaChi);
+        addField(form, gbc, y++, "Chức vụ", cboChucVu);
         addField(form, gbc, y++, "Trạng thái", cboTrangThai);
 
         add(form, BorderLayout.WEST);
 
         // ===== TABLE =====
-        tableModel = new PhongChieuTableModel();
+        tableModel = new NhanVienTableModel();
         table = new JTable(tableModel);
         AppTheme.styleTable(table);
 
@@ -76,15 +101,14 @@ public class PhongChieuPanel extends JPanel {
         AppTheme.styleSuccessButton(btnAdd);
         AppTheme.styleWarningButton(btnUpdate);
         AppTheme.styleDangerButton(btnDelete);
-        AppTheme.stylePrimaryButton(btnSeatMap);
 
         btn.add(btnAdd);
         btn.add(btnUpdate);
         btn.add(btnDelete);
-        btn.add(btnSeatMap);
 
         add(btn, BorderLayout.SOUTH);
 
+        // ===== STYLE =====
         setUIStyle();
 
         txtMa.setEditable(false);
@@ -110,8 +134,9 @@ public class PhongChieuPanel extends JPanel {
         Dimension size = new Dimension(200, 28);
 
         for (Component c : new Component[]{
-                txtMa, txtTen, txtSoHang, txtSoCot,
-                txtManHinh, txtAmThanh, cboTrangThai
+                txtMa, txtTen, txtNgaySinh,
+                txtSDT, txtEmail, txtDiaChi,
+                cboGioiTinh, cboTrangThai, cboChucVu
         }) {
             c.setFont(font);
             c.setPreferredSize(size);

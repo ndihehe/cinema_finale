@@ -30,8 +30,8 @@
             <property name="javax.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
             <property name="jakarta.persistence.jdbc.url"
                       value="jdbc:mysql://localhost:3306/quanlybanvexemphim?useUnicode=true&amp;characterEncoding=UTF-8&amp;serverTimezone=UTC"/>
-            <property name="javax.persistence.jdbc.user" value="ur_value"/>
-            <property name="javax.persistence.jdbc.password" value="ur_pass"/>
+            <property name="javax.persistence.jdbc.user" value="nhập tài khoản"/>
+            <property name="javax.persistence.jdbc.password" value="nhập vào mật khẩu"/>
 
             <property name="hibernate.dialect"
                       value="org.hibernate.dialect.MySQLDialect"/>

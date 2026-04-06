@@ -8,8 +8,8 @@ import javax.swing.JOptionPane;
 import org.example.cinema_finale.dto.PhongChieuDTO;
 import org.example.cinema_finale.service.PhongChieuService;
 import org.example.cinema_finale.util.DataSyncEventBus;
-import org.example.cinema_finale.view.GhePanel;
-import org.example.cinema_finale.view.PhongChieuPanel;
+import org.example.cinema_finale.view.panel.staff.GhePanel;
+import org.example.cinema_finale.view.panel.staff.PhongChieuPanel;
 
 public class PhongChieuController {
 

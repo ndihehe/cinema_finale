@@ -1,17 +1,18 @@
 package org.example.cinema_finale.controller;
 
+import java.math.BigDecimal;
+import java.time.ZoneId;
+
+import javax.swing.JOptionPane;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+
 import org.example.cinema_finale.dao.LoaiKhuyenMaiDao;
 import org.example.cinema_finale.dto.KhuyenMaiDTO;
 import org.example.cinema_finale.dto.KhuyenMaiFormDTO;
 import org.example.cinema_finale.entity.LoaiKhuyenMai;
 import org.example.cinema_finale.service.KhuyenMaiService;
-import org.example.cinema_finale.view.KhuyenMaiPanel;
-
-import javax.swing.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
-import java.math.BigDecimal;
-import java.time.ZoneId;
+import org.example.cinema_finale.view.panel.staff.KhuyenMaiPanel;
 
 public class KhuyenMaiController {
 

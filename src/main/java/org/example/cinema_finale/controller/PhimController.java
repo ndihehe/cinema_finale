@@ -26,7 +26,7 @@ import org.example.cinema_finale.dto.PhimDTO;
 import org.example.cinema_finale.service.PhimService;
 import org.example.cinema_finale.util.DataSyncEventBus;
 import org.example.cinema_finale.util.PosterStorageUtil;
-import org.example.cinema_finale.view.PhimPanel;
+import org.example.cinema_finale.view.panel.staff.PhimPanel;
 
 public class PhimController {
 
